@@ -85,7 +85,8 @@ kHz pour cette première version.
 ### Structure et coût à mesurer
 
 Trois séparateurs × (deux biquads passe-bas + deux passe-haut) = 12 biquads
-par canal, donc 24 pour la stéréo. Un biquad direct-form II transposé utilise
+par canal. La compensation all-pass ajoute 6 biquads par canal (SUB à 350 et
+2 500 Hz, BASS à 2 500 Hz), soit 18 par canal et 36 pour la stéréo. Un biquad direct-form II transposé utilise
 deux états par section. Prévoir deux canaux totalement indépendants. Le coût
 théorique est de l'ordre de 120 multiplications par échantillon stéréo (selon
 l'implémentation et les opérations fusionnées), à mesurer sur le FM-1 avant
@@ -118,16 +119,7 @@ directe I à accumulateur 64 bits. Il fournit deux sections passe-bas et deux
 passe-haut par séparateur, un état indépendant par canal, des gains Q15 et un
 bypass exact. Le test associé est `tests/roots_lr4_isolator_test.c`.
 
-**Réserve importante découverte pendant le calcul de la cascade :** même si
-chaque séparateur LR4 isolé est complémentaire en amplitude, la cascade
-successive donne aux bandes BASS et MIDS une phase supplémentaire due aux
-séparateurs situés plus haut. La somme des quatre bandes n'est donc pas plate
-à ±0,1 dB sur toute la plage. Le test du prototype vérifie une enveloppe
-large (environ -1,5 dB à +0,2 dB sur les fréquences échantillonnées), pas une
-spécification de produit. Une compensation de phase/all-pass ou une autre
-topologie multibande est nécessaire avant toute intégration au master bus.
-Les mesures restent des tests logiciels à 44,1 kHz, pas des mesures sur le
-FM-1 physique.
+La première cascade LR4 sans compensation présentait un creux de recomposition. Ce défaut a conduit à ajouter les chemins all-pass décrits ci-dessous. Les mesures restent des tests logiciels à 44,1 kHz, pas des mesures sur le FM-1 physique.
 
 
 ## Compensation de phase LR4 — mise à jour
