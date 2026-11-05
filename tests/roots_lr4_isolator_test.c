@@ -49,6 +49,11 @@ int main(void)
             CHECK(a>0.995 && a<1.005,"phase-aligned unity sum response within +/-0.5%");
         }
     }
+    CHECK(measure(20,1)>0.97 && measure(1000,1)<0.02,"SUB is low-passed below 120 Hz");
+    CHECK(measure(120,2)>0.45 && measure(120,2)<0.55
+       && measure(350,2)>0.45 && measure(350,2)<0.55,"BASS is bounded by the 120/350 Hz crossovers");
+    CHECK(measure(1000,4)>0.90 && measure(2500,4)>0.45 && measure(2500,4)<0.55,"MIDS occupies the 350 Hz..2.5 kHz band");
+    CHECK(measure(10000,8)>0.95 && measure(1000,8)<0.05,"TOPS is high-passed above 2.5 kHz");
     for(i=1;i<16;i++) {
         unsigned k;
         for(k=0;k<sizeof(f)/sizeof(f[0]);k++) {
