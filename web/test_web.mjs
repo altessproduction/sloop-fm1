@@ -35,11 +35,12 @@ const HERE = fileURLToPath(new URL(".", import.meta.url));
     try { new vm.Script(script); ok(true, "ROOTS DUB lab: JavaScript syntax"); }
     catch (e) { ok(false, `ROOTS DUB lab: JavaScript syntax (${e.message})`); }
   }
-  ok((lab.match(/makeLR\(ctx,'allpass',350\)/g) || []).length === 1
-    && (lab.match(/makeLR\(ctx,'allpass',2500\)/g) || []).length === 2
-    && lab.includes("subAP350a,subAP350b,subAP2500a,subAP2500b")
-    && lab.includes("bassAP2500a,bassAP2500b"),
-    "ROOTS DUB lab: phase compensation on SUB and BASS branches");
+  ok((lab.match(/makeAP\(ctx,350\)/g) || []).length === 1
+    && (lab.match(/makeAP\(ctx,2500\)/g) || []).length === 2
+    && lab.includes("subAP350,subAP2500")
+    && lab.includes("bassAP2500")
+    && lab.includes("function makeAP(ctx,freq)"),
+    "ROOTS DUB lab: one phase-compensation all-pass per later crossover");
 }
 
 /* ------------------------------------------------------------ editor protocol --- */
