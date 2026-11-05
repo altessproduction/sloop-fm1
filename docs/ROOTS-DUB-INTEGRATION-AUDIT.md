@@ -168,3 +168,15 @@ Le prototype LR4 a été renforcé avant toute intégration :
 - maintien des tests de somme unitaire, des 15 masques, du mute et du stress pleine échelle.
 
 Ces tests sont ajoutés au code mais ne sont pas exécutés dans cet environnement. Le moteur reste volontairement non raccordé à `mix_block()` tant que la mesure CPU sur cible, la validation fixe-point et les tests FM-1 ne sont pas disponibles.
+
+
+### 2026-11-05 — cas limites backup et stockage A/B
+
+La passe complémentaire a confirmé que `tests/storage_test.c` couvre déjà les coupures simulées pendant l'écriture du payload, avant le commit header, la corruption du payload récent avec repli sur l'ancienne copie, ainsi que l'écriture d'un objet vide. Ces tests portent sur le moteur de stockage A/B simulé ; ils ne simulent pas à eux seuls le parseur BK_PUT ni une restauration complète de projet.
+
+Ajouts de cette passe :
+- `tests/project_test.c` rejette explicitement FUN7 tronqué d'un octet, FUN7 avec un octet surnuméraire et une longueur négative ; les tests FUN6 tronqué et checksum invalide existaient déjà.
+- `tests/storage_test.c` vérifie qu'un payload de 3 840 octets est sauvegardé/relu sans altération et qu'un payload de 3 841 octets est refusé.
+- Le chemin de restauration éditeur `project_restore()` n'a pas de test hôte direct : il dépend de l'état flash et de l'application du projet. Les tests existants couvrent séparément l'import des formats et les transactions A/B, pas leur orchestration de bout en bout.
+
+Ces tests ont été ajoutés au dépôt mais ne sont pas compilés/exécutés ici. Il reste nécessaire de lancer le banc complet, puis de tester des backups FUN6/FUN7 réels sur appareil avant fusion.
