@@ -112,22 +112,3 @@ static inline int32_t roots_lr4_process(roots_lr4_t *s, int32_t input)
     return out;
 }
 #endif
-    rest=roots_lr4_sat(rest);
-    for (i=0;i<3;i++) {
-        int32_t lo=rest, hi=rest;
-        for (j=0;j<2;j++) {
-            lo=roots_lr4_biquad(lo,&s->lp[i][j],&roots_lr4_lp_coeff[i]);
-            hi=roots_lr4_biquad(hi,&s->hp[i][j],&roots_lr4_hp_coeff[i]);
-        }
-        bands[i]=lo;
-        rest=hi;
-    }
-    bands[3]=rest;
-    /* Phase-align the earlier bands through the later crossover all-passes.
-     * Without this, serial LR4 splits do not sum flat even though each
-     * individual LP/HP pair is complementary.
-     */
-    bands[0]=roots_lr4_allpass(bands[0],s->allpass[0],&roots_lr4_ap_coeff[1]);
-    bands[0]=roots_lr4_allpass(bands[0],s->allpass[1],&roots_lr4_ap_coeff[2]);
-    bands[1]=roots_lr4_allpass(bands[1],s->allpass[2],&roots_lr4_ap_coeff[2]);
-
