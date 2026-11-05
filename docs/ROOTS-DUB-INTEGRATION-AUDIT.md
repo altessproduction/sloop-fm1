@@ -202,3 +202,14 @@ La relecture approfondie a retrouvé un banc d'intégration existant, plus compl
 Cela invalide l'hypothèse précédente selon laquelle le chemin éditeur complet n'avait pas de banc hôte : il en existe déjà un. En revanche, la couverture reste incomplète sur quelques assertions déterministes spécifiques à ROOTS DUB : restauration BK_PUT explicite d'un FUN6, CRC de transfert incorrect avec vérification de non-modification, échec programmé de flash lors de l'écriture d'une section avec vérification de conservation de l'ancienne copie, et cas de transfert incomplet vérifié par son code de retour. Le mode fuzz peut rencontrer certains de ces cas, mais ne constitue pas à lui seul une preuve ciblée et reproductible de chacun.
 
 La prochaine extension pertinente est donc d'ajouter ces scénarios déterministes à `tests/editor_fuzz.c` / `tests/editor_host.c`, en réutilisant les fonctions de construction de trames et le faux NOR existants. Ne pas créer un second banc de flash ni prétendre que ces scénarios sont déjà couverts. Aucun de ces tests n'a été exécuté dans cet environnement.
+
+### 2026-11-05 — régressions BK_PUT déterministes ajoutées
+
+Une suite dédiée `tests/editor_bkput_test.c` réutilise le banc d'intégration réel de `tests/editor_fuzz.c` / `tests/editor_host.c` et ajoute des scénarios reproductibles :
+
+- restauration SysEx d'un backup FUN6 construit avec le layout historique immuable, puis vérification de sa migration FUN7 et de l'initialisation neutre des quatre gains ROOTS ;
+- transfert FUN7 avec CRC annoncé incorrect : le commit doit renvoyer le code 2 et le projet de travail doit rester identique ;
+- transfert incomplet : le commit doit renvoyer le code 2 et ne pas modifier le projet ;
+- restauration d'une section avec panne injectée au premier programme flash : le commit doit renvoyer le code 4, la copie RAM ne doit pas bouger et le chargement depuis flash doit retrouver l'ancienne copie A/B.
+
+Le script `tests/editor_fuzz.sh` compile et exécute désormais ce test déterministe sous AddressSanitizer et UndefinedBehaviorSanitizer avant les campagnes fuzz. Ces ajouts sont en attente de compilation/exécution dans un environnement équipé des artefacts générés par `./build.sh` ; ils ne constituent pas encore un résultat de test validé.
