@@ -40,7 +40,7 @@ Le code de mix utilise des accumulateurs `int32_t`, coefficients Q12/Q15 et des 
 
 ### 4. Les projets ont un format compact versionné
 
-`project.c` utilisait le format 6 (`FUN6)` au moment de cet audit initial. La branche actuelle écrit FUN7 et conserve FUN6 comme structure historique de lecture. FUN6 stockait 32 globals historiques dans `g[]`, puis des champs dédiés (dont le délai drums et la texture), et séparait les paramètres de piste en trois groupes : paramètres 16 bits historiques, paramètres ajoutés en octets, et paramètres moteur.
+`project.c` utilisait le format 6 (FUN6) au moment de cet audit initial. La branche actuelle écrit FUN7 et conserve FUN6 comme structure historique de lecture. FUN6 stockait 32 globals historiques dans `g[]`, puis des champs dédiés (dont le délai drums et la texture), et séparait les paramètres de piste en trois groupes : paramètres 16 bits historiques, paramètres ajoutés en octets, et paramètres moteur.
 
 Des assertions statiques imposent notamment :
 
