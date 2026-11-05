@@ -353,6 +353,10 @@ int main(void)
     bad += check("FUN7 with a bad Roots checksum: refused", !proj_import(&q2, &buf, (int)sizeof q));
     q.roots_gain[2] ^= 1u;
     q.sum = proj_sum(&q);
+    memcpy(&buf, &q, sizeof q);
+    bad += check("FUN7 truncated by one byte: refused", !proj_import(&q2, &buf, (int)sizeof q - 1));
+    bad += check("FUN7 with one trailing byte: refused", !proj_import(&q2, &buf, (int)sizeof q + 1));
+    bad += check("negative project length: refused", !proj_import(&q2, &buf, -1));
 
     /* damaged / wrong size */
     v2.t[1].p[3]++;
