@@ -40,7 +40,7 @@ Le code de mix utilise des accumulateurs `int32_t`, coefficients Q12/Q15 et des 
 
 ### 4. Les projets ont un format compact versionné
 
-`project.c` utilise actuellement le format 6 (`FUN6`). Il conserve 32 globals historiques dans `g[]`, puis des champs dédiés (dont le délai drums et la texture), et sépare les paramètres de piste en trois groupes : paramètres 16 bits historiques, paramètres ajoutés en octets, et paramètres moteur.
+`project.c` utilisait le format 6 (`FUN6)` au moment de cet audit initial. La branche actuelle écrit FUN7 et conserve FUN6 comme structure historique de lecture. FUN6 stockait 32 globals historiques dans `g[]`, puis des champs dédiés (dont le délai drums et la texture), et séparait les paramètres de piste en trois groupes : paramètres 16 bits historiques, paramètres ajoutés en octets, et paramètres moteur.
 
 Des assertions statiques imposent notamment :
 
@@ -76,10 +76,7 @@ Le prototype utilise des cascades de sections Butterworth en Web Audio. Avant d�
 
 ### Paramètres et commandes
 
-Ne pas exposer de nouveaux paramètres persistants avant d’avoir arrêté le format de stockage. Première étape : module avec configuration de test interne, bypass par défaut, et tests unitaires. Ensuite choisir entre :
-1. extension versionnée des projets et des presets;
-2. paramètres temporaires non sauvegardés pour valider l’ergonomie;
-3. réutilisation de champs de réserve uniquement après preuve qu’ils sont libres sur tous les formats concernés.
+Cette proposition décrivait les précautions à prendre avant d'ajouter des paramètres. Elles ont depuis été traitées pour les projets avec FUN7 : le format est versionné, FUN6 reste lisible et les anciens formats reçoivent des gains neutres. Les presets utilisateur et les paramètres moteur ne sont pas modifiés par cette extension.
 
 ## Dub Siren et One-Key Skank
 
@@ -142,7 +139,7 @@ Le module `roots_isolator.h` reste autonome pour le moment. L'insertion DSP et l
 
 La simulation du module `roots_isolator.h` (44,1 kHz, sinusoïdes établies) révèle un recouvrement trop important pour un isolateur de performance : à 350 Hz, MIDS atteint environ 1,163 fois l'amplitude d'entrée lorsqu'elle est seule ; à 1 kHz, TOPS reçoit encore environ 0,643. L'unité des quatre gains recompose le signal, mais cela ne garantit pas une séparation correcte lors de l'atténuation de bandes. Le module reste donc expérimental et ne doit pas être raccordé au master bus en l'état. Il faut d'abord remplacer la topologie par un crossover à pentes contrôlées, puis tester phase, sommation, crêtes et les combinaisons de bandes. Simulation documentée dans `ROOTS-DUB-ISOLATOR-DSP.md`.
 
-Le format FUN7 est maintenant spécifié plus précisément : 12 octets de configuration Roots Dub ajoutés au FUN6, taille attendue 3 828 octets ; FUN5 impose que l'union de staging reste à 3 840 octets. L'implémentation binaire reste à faire avec une structure FUN6 historique distincte et des tests hôte de migration.
+Le format FUN7 est maintenant implémenté : 12 octets de configuration Roots Dub ajoutés au FUN6, taille attendue 3 828 octets ; FUN5 impose que l'union de staging reste à 3 840 octets. Une structure FUN6 historique distincte et des tests hôte de migration sont présents ; ils restent à exécuter dans un checkout complet.
 
 
 ## Mise à jour — 2026-11-05, prototypes LR4 et FUN7
