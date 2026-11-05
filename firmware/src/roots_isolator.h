@@ -10,7 +10,7 @@
 #define ROOTS_ISO_MAX 131071
 typedef struct {
     int32_t lp1[3], lp2[3];
-    int16_t gain[4];
+    int32_t gain[4];
     uint8_t enabled;
 } roots_iso_t;
 /* alpha = 1-exp(-2*pi*fc/44100), Q15; split points 120, 350, 2500 Hz. */
