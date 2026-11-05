@@ -35,7 +35,9 @@ du second ordre, avec numérateur renversé ; il ne faut pas le doubler.
 
 Le module contient 12 biquads de séparation et 3 de compensation par canal,
 soit 15 par canal et 30 en stéréo. L'ordre de grandeur est d'environ 150
-multiplications par échantillon stéréo. Ce coût doit être mesuré sur le FM-1
+multiplications par échantillon stéréo. L'état `roots_lr4_t` occupe environ 260 octets
+par canal (520 octets en stéréo) ; un test hôte impose un plafond de 264 octets.
+Ce coût arithmétique et cette empreinte doivent être mesurés/confirmés sur le FM-1
 avant toute intégration.
 
 ### Contrat logiciel
