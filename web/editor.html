@@ -2989,7 +2989,7 @@ function makeMockDevice(opt = {}) {
     14, 14, 15, 15, 13, 13, 15, 15, 13, 13, 7, 7, 7, 14, 14, 15, 15];
   const laneOf = (n) => (n < 35 ? 0 : n > 81 ? 13 : LANE_OF_GM[n - 35]);
   const v5 = !opt.legacy && !opt.v3;              /* SLOOP 2.0: steps with level / ratchet, DRUM_STEP, TRACK solo */
-  const mockProto = opt.noBackup ? 5 : opt.v7 ? 7 : opt.v8 ? 8 : opt.v9 ? 9 : opt.v10 ? 10 : opt.v11 ? 11 : 12;   /* INFO's protocol */
+  const mockProto = opt.noBackup ? 5 : opt.v7 ? 7 : opt.v8 ? 8 : opt.v9 ? 9 : opt.v10 ? 10 : opt.v11 ? 11 : 13;   /* INFO's protocol */
   /* the drum step as an old (v1..v4) step: its first 4 lanes as GM notes, ACC when one is hard (editor.c ed_dstep_old) */
   const dOld = (d) => {
     const notes = [];
@@ -3170,7 +3170,7 @@ function makeMockDevice(opt = {}) {
     settings: mockSettings(),                       /* v6: the settings object (2.5: a PER3 with a song order) */
     dsyn: null, dsynStored: null, dsynPlayed: [],  /* v10: the SYN kits (RAM, flash), the auditions heard */
     ml: null,                                       /* 2.6: the MIDI LEARN map (seq.c ml_tab, 16 x 2 bytes), null: none */
-    bkSnap: null, bkPut: null,
+    bkSnap: null, bkPut: null, roots: { enabled: false, gains: [127, 127, 127, 127] },
     watch: false, v4: false, lastReq: 0, playing: false,
     /* v12 (LIVE): the transport's start, the sections (A..D: playing, asked for at a time), song mode, SONG REC, fills,
        the punch-in effect, REC waiting for a note, undo (0 none, 1 undo, 2 redo), a store waiting for its second press,
@@ -3339,6 +3339,15 @@ function makeMockDevice(opt = {}) {
         break;
       case CMD.PING:
         b(0);
+        break;
+      case CMD.ROOTS_GET:
+        if (a.length || mockProto < 13) return null;
+        b(st.roots.enabled ? 1 : 0); st.roots.gains.forEach(b);
+        break;
+      case CMD.ROOTS_SET:
+        if (a.length !== 5 || mockProto < 13) return null;
+        st.roots = { enabled: !!a[0], gains: a.slice(1, 5).map((x) => Math.max(0, Math.min(127, x))) };
+        b(st.roots.enabled ? 1 : 0); st.roots.gains.forEach(b);
         break;
       case CMD.INFO:
         s(opt.legacy ? "FELUCCA 0.4 BETA (MOCK)" : opt.v3 ? "FELUCCA 0.8 (MOCK)" : "FELUCCA SLOOP 2.6 (MOCK)"); b(ENG.length); b(P_COUNT); b(G_COUNT); b(NSTEP); b(P_E0);
