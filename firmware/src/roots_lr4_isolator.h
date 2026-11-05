@@ -16,6 +16,7 @@ typedef struct {
 
 typedef struct {
     roots_lr4_biquad_state_t lp[2], hp[2];
+    roots_lr4_biquad_state_t allpass[3][2]; /* SUB@350, SUB@2500, BASS@2500 */
     int32_t gain[4]; /* Q15, unity = 32768 */
     uint8_t enabled;
 } roots_lr4_t;
@@ -53,6 +54,20 @@ static inline int32_t roots_lr4_biquad(int32_t x,
     return y;
 }
 
+static const roots_lr4_coeff_t roots_lr4_ap_coeff[3] = {
+    {1048091221,-2121522935,1073741824,-2121522935,1048091221},
+    {1000627836,-2071791055,1073741824,-2071791055,1000627836},
+    {648969343,-1614580579,1073741824,-1614580579,648969343}
+};
+
+/* LR4 all-pass = two identical second-order all-pass sections. */
+static inline int32_t roots_lr4_allpass(int32_t x,
+        roots_lr4_biquad_state_t state[2], const roots_lr4_coeff_t *c)
+{
+    x=roots_lr4_biquad(x,&state[0],c);
+    return roots_lr4_biquad(x,&state[1],c);
+}
+
 static inline void roots_lr4_init(roots_lr4_t *s)
 {
     memset(s,0,sizeof(*s));
@@ -77,6 +92,13 @@ static inline int32_t roots_lr4_process(roots_lr4_t *s, int32_t input)
         rest=hi;
     }
     bands[3]=rest;
+    /* Phase-align the earlier bands through the later crossover all-passes.
+     * Without this, serial LR4 splits do not sum flat even though each
+     * individual LP/HP pair is complementary.
+     */
+    bands[0]=roots_lr4_allpass(bands[0],s->allpass[0],&roots_lr4_ap_coeff[1]);
+    bands[0]=roots_lr4_allpass(bands[0],s->allpass[1],&roots_lr4_ap_coeff[2]);
+    bands[1]=roots_lr4_allpass(bands[1],s->allpass[2],&roots_lr4_ap_coeff[2]);
     for (i=0;i<4;i++) mix+=(int64_t)bands[i]*s->gain[i];
     return roots_lr4_sat(mix >> 15);
 }
