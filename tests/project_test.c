@@ -26,6 +26,15 @@ static int check(const char *what, int ok)
     return ok ? 0 : 1;
 }
 
+static int roots_neutral_ok(const project_t *p)
+{
+    uint32_t i;
+    for (i = 0; i < 4u; i++)
+        if (p->roots_gain[i] != 32768u)
+            return 0;
+    return !p->roots_enabled && !p->roots_rsv[0] && !p->roots_rsv[1] && !p->roots_rsv[2];
+}
+
 /* the value parameter k (old id) of track t had in the old project */
 static int16_t oldv(uint32_t t, uint32_t k) { return (int16_t)(t * 100u + k * 3u + 1u); }
 
@@ -155,7 +164,7 @@ int main(void)
     v3.sum = proj_hash(&v3, sizeof v3 - 4u);
     memcpy(&buf, &v3, sizeof v3);
     ok = proj_import(&q, &buf, (int)sizeof v3);
-    bad += check("FUN3 -> FUN7: converted, valid FUN7 slot", ok && proj_ok(&q) && q.magic == PROJ_MAGIC);
+    bad += check("FUN3 -> FUN7: converted, valid FUN7 slot", ok && proj_ok(&q) && q.magic == PROJ_MAGIC && roots_neutral_ok(&q));
     ok = q.sel == 3 && q.g[G_SWING] == 40;
     for (i = 0; i < PROJ_NG_V3; i++)
         ok &= i == G_SWING || q.g[i] == (int16_t)(300 + i);
@@ -195,7 +204,7 @@ int main(void)
     v2.sum = proj_hash(&v2, sizeof v2 - 4u);
     bad += check("FUN2 image is 2552 bytes (as stored)", sizeof v2 == 2552u);
     memcpy(&buf, &v2, sizeof v2);
-    ok = proj_import(&q, &buf, (int)sizeof v2);
+    ok = proj_import(&q, &buf, (int)sizeof v2) && roots_neutral_ok(&q);
     bad += check("FUN2 -> FUN7: converted, valid FUN7 slot", ok && proj_ok(&q) && q.magic == PROJ_MAGIC);
     ok = q.sel == 2;
     for (i = 0; i < PROJ_NG_V2; i++)
@@ -229,7 +238,7 @@ int main(void)
     v4.sum = proj_hash(&v4, sizeof v4 - 4u);
     bad += check("FUN4 image is 3112 bytes (as stored)", sizeof v4 == 3112u);
     memcpy(&buf, &v4, sizeof v4);
-    ok = proj_import(&q2, &buf, (int)sizeof v4) && proj_ok(&q2) && q2.magic == PROJ_MAGIC && q2.sel == 1 && q2.t[1].engine == 8 &&
+    ok = proj_import(&q2, &buf, (int)sizeof v4) && roots_neutral_ok(&q2) && proj_ok(&q2) && q2.magic == PROJ_MAGIC && q2.sel == 1 && q2.t[1].engine == 8 &&
          q2.t[0].step[3].lvl == 0x9C && q2.t[0].step[3].rat == 0x27 && dstep_lvl(&q2.t[TRK_DRUM].dstep[5], 13) == LV_GHOST &&
          dstep_rat(&q2.t[TRK_DRUM].dstep[5], 13) == 2u && !memcmp(q2.g, v4.g, sizeof q2.g);
     for (t = 0; t < NTRK; t++) {
@@ -273,7 +282,7 @@ int main(void)
     v5.t[1].lock[1].step = 4, v5.t[1].lock[1].param = P_DIST, v5.t[1].lock[1].val = 100;
     v5.sum = proj_hash(&v5, sizeof v5 - 4u);
     memcpy(&buf, &v5, sizeof v5);
-    ok = proj_import(&q2, &buf, (int)sizeof v5) && proj_ok(&q2) && q2.magic == PROJ_MAGIC && q2.sel == 2 && q2.drdly == 55 &&
+    ok = proj_import(&q2, &buf, (int)sizeof v5) && roots_neutral_ok(&q2) && proj_ok(&q2) && q2.magic == PROJ_MAGIC && q2.sel == 2 && q2.drdly == 55 &&
          !memcmp(q2.g, v5.g, sizeof q2.g);
     for (t = 0; t < NTRK; t++) {
         for (i = 0; i < PROJ_NP_V5 - 8u; i++)
@@ -371,7 +380,7 @@ int main(void)
     fill_v2_track(&v1.t, 0);
     v1.sum = proj_hash(&v1, sizeof v1 - 4u);
     memcpy(&buf, &v1, sizeof v1);
-    ok = proj_import(&q, &buf, (int)sizeof v1) && proj_ok(&q) && track_ok_v2(&q.t[0], &v1.t, 0) && q.g[5] == 705;
+    ok = proj_import(&q, &buf, (int)sizeof v1) && roots_neutral_ok(&q) && proj_ok(&q) && track_ok_v2(&q.t[0], &v1.t, 0) && q.g[5] == 705;
     for (t = 1; t < NTRK; t++)
         ok &= q.t[t].preset == 0xFF && q.t[t].p[P_SLCR] == 0 && q.t[t].p[P_LEVEL] == TP[P_LEVEL].def &&
               pt_get(&q.t[t], P_E0) == ENGINES[trk_def_engine(t)]->edit[0].def && q.t[t].lock[0].step == LOCK_FREE &&
