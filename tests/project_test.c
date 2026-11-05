@@ -387,6 +387,8 @@ int main(void)
     dstep_set(&TDRUM->dstep[9], 4, LV_SOFT, 1);
     song.g[G_DUST] = 33;
     song.g[G_DRDLY] = 77;
+    proj_roots_gain[0] = 32768u, proj_roots_gain[1] = 24576u, proj_roots_gain[2] = 16384u, proj_roots_gain[3] = 8192u;
+    proj_roots_enabled = 1;
     trk[1].micro[2] = -20;
     TDRUM->micro[9] = 12;
     lock_set(&trk[1], 2, P_ED_FLT, -30);
@@ -400,6 +402,8 @@ int main(void)
     proj_capture(&q);
     host_tracks_init();
     song.g[G_DRDLY] = 0;
+    memset(proj_roots_gain, 0, sizeof proj_roots_gain);
+    proj_roots_enabled = 0;
     proj_apply(&q, 1);
     ok = q.drdly == 77 && song.g[G_DRDLY] == 77 && trk[2].p[P_SLEN] == 7 && trk[1].step[2].n == 2 && trk[1].step[2].lvl == 0x0D && song.g[G_DUST] == 33 &&
          dstep_has(&TDRUM->dstep[9], 4) && dstep_lvl(&TDRUM->dstep[9], 4) == LV_SOFT && dstep_rat(&TDRUM->dstep[9], 4) == 1u &&
@@ -410,7 +414,8 @@ int main(void)
          step_fill(TDRUM, 63) == FC_FILL && step_fill(TDRUM, 8) == FC_NORM &&
          trk[2].p[P_ITYPE] == 7 && trk[2].p[P_IA] == 11 && trk[2].p[P_IMIX] == 77 && TDRUM->p[P_ITYPE] == 4 &&
          trk[0].p[P_LSYNC] == 6 && trk[0].p[P_LTRIG] == 1 && trk[0].p[P_LPOL] == 1 && trk[0].p[P_ESYNC] == 1 &&
-         trk[0].p[P_FTYPE] == 1;
+         trk[0].p[P_FTYPE] == 1 && proj_roots_gain[0] == 32768u && proj_roots_gain[1] == 24576u &&
+         proj_roots_gain[2] == 16384u && proj_roots_gain[3] == 8192u && proj_roots_enabled == 1;
     bad += check("the working project: capture -> apply round trip (levels, lanes, DUST, drum DLY, nudges, locks, fill conditions, the 2.6 parameters)", ok);
     q2 = q;
     q2.drdly = 0;                                  /* a 2.4 project: the byte was 0 */
