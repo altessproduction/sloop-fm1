@@ -159,3 +159,15 @@ Les prototypes ont progressé depuis cet audit initial :
 - Le format FUN7 est implémenté sur la branche avec migration FUN1..FUN6 et gains Roots neutres pour les anciens projets.
 
 Ces ajouts ne changent pas la décision d'intégration : aucun de ces tests n'a encore été exécuté dans un checkout complet, aucun build firmware/WASM n'a été produit et aucun essai sur FM-1 n'a eu lieu. Le LR4 reste isolé du bus master. Les contrôles web ajoutés doivent être exécutés avec `node web/test_web.mjs` dans un environnement disposant des dépendances/outils du dépôt.
+
+
+### 2026-11-05 — transitions et séparation LR4
+
+Le prototype LR4 a été renforcé avant toute intégration :
+- activation/désactivation avec fondu dry/wet de 64 échantillons ;
+- retour au bypass bit-identique après extinction complète ;
+- remise à zéro des historiques de biquads à la réactivation, pour ne pas réutiliser des états périmés ;
+- assertions de réponse individuelle : SUB sous 120 Hz, BASS entre 120 et 350 Hz, MIDS entre 350 Hz et 2,5 kHz, TOPS au-dessus de 2,5 kHz ;
+- maintien des tests de somme unitaire, des 15 masques, du mute et du stress pleine échelle.
+
+Ces tests sont ajoutés au code mais ne sont pas exécutés dans cet environnement. Le moteur reste volontairement non raccordé à `mix_block()` tant que la mesure CPU sur cible, la validation fixe-point et les tests FM-1 ne sont pas disponibles.
