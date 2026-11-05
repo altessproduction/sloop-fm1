@@ -61,9 +61,10 @@ Le test `tests/roots_lr4_isolator_test.c` est référencé dans
 2. coupure des quatre bandes ;
 3. reconstruction DC à gain unitaire ;
 4. réponse de la somme des bandes à ±0,5 % sur des fréquences de 20 Hz à 20 kHz ;
-5. les 15 masques non vides sur la même grille de fréquences ;
-6. bornage sous excitation pleine échelle ;
-7. rampes ON/OFF, bypass exact après extinction et réinitialisation des états à la réactivation.
+5. séparation fréquentielle individuelle des quatre bandes et points de crossover ;
+6. les 15 masques non vides sur la même grille de fréquences ;
+7. bornage sous excitation pleine échelle ;
+8. rampes ON/OFF, bypass exact après extinction et réinitialisation des états à la réactivation.
 
 Le script complet exige d'abord le build SDK (`./build.sh`). Dans cet
 environnement de travail, le checkout local et le SDK JieLi ne sont pas
