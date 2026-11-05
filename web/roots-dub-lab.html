@@ -74,7 +74,7 @@ osc=ctx.createOscillator();osc.type='sawtooth';osc.frequency.value=440;
 lfo=ctx.createOscillator();lfo.type='sine';lfo.frequency.value=2;lfoGain=ctx.createGain();lfoGain.gain.value=220;
 lfo.connect(lfoGain);lfoGain.connect(osc.frequency);osc.connect(sirenFilter);
 delay=ctx.createDelay(1.2);feedback=ctx.createGain();delayWet=ctx.createGain();delay.delayTime.value=.375;feedback.gain.value=.35;delayWet.gain.value=.35;
-const sirenBus=ctx.createGain();sirenFilter.connect(sirenBus);sirenBus.connect(master);sirenBus.connect(delay);delay.connect(delayWet);delayWet.connect(master);delay.connect(feedback);feedback.connect(delay);
+sirenGain.gain.setTargetAtTime(.22,ctx.currentTime,.015);delay.connect(delayWet);delayWet.connect(master);delay.connect(feedback);feedback.connect(delay);
 osc.start();lfo.start();
 }
 function audioOn(){if(!ctx)setup();ctx.resume();$('dot').classList.add('on');$('status').textContent='Audio actif · traitement local dans le navigateur';['siren','release','testTone','muteTone','stop'].forEach(id=>$(id).disabled=false);$('start').disabled=true;sync()}
