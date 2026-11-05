@@ -132,7 +132,7 @@ Ces réglages ne pilotent pour l'instant que les données du projet. Le DSP LR4 
 
 ### Décision d'ingénierie
 
-Le module `roots_isolator.h` reste autonome pour le moment. L'insertion DSP et les contrôles seront réalisés ensemble, après le schéma de persistance et la version projet définis et testables. Cela évite un isolateur qui marche en RAM mais perd ses réglages à l'arrêt, ou qui change les projets anciens.
+Le module `roots_lr4_isolator.h` reste autonome pour le moment. La persistance FUN7, les commandes SysEx et les curseurs web sont déjà implémentés ; ils ne pilotent toutefois pas encore le DSP. L'insertion audio est reportée jusqu'à validation des tests, confirmation de la fréquence d'échantillonnage et mesure CPU sur cible. Les gains par bande devront également être lissés pour éviter les clics lors des changements.
 
 
 ## 2026-11-05 — décision DSP après simulation fréquentielle
