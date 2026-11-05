@@ -128,3 +128,21 @@ spécification de produit. Une compensation de phase/all-pass ou une autre
 topologie multibande est nécessaire avant toute intégration au master bus.
 Les mesures restent des tests logiciels à 44,1 kHz, pas des mesures sur le
 FM-1 physique.
+
+
+## Compensation de phase LR4 — mise à jour
+
+La cascade série ne peut pas simplement additionner les sorties LP et HP de
+chaque séparateur : le couple LR4 forme un all-pass, pas un fil de phase nulle.
+Les branches basses doivent donc traverser les all-pass des séparateurs
+ultérieurs avant sommation. Le module ajoute trois chemins de compensation :
+SUB à 350 Hz puis 2,5 kHz, et BASS à 2,5 kHz. Chaque all-pass LR4 est constitué
+de deux biquads all-pass du second ordre utilisant le dénominateur du
+Butterworth et le numérateur renversé.
+
+La simulation en double précision de cette topologie donne une recomposition
+unitaire (écart inférieur à 0,001 % sur les fréquences échantillonnées de
+20 Hz à 20 kHz). Le test C est resserré à ±0,5 % pour tenir compte de la
+quantification et des arrondis fixes. Il reste à exécuter ce test sur un
+checkout complet, mesurer le coût CPU sur le FM-1 et vérifier les transitoires
+et les crêtes à tous les réglages.
