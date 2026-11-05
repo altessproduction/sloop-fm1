@@ -48,7 +48,7 @@ avant toute intégration.
   une rampe dry/wet de 64 échantillons revient au bypass puis fige les états ; à la
   réactivation, les historiques sont remis à zéro et une rampe de 64 échantillons
   évite une commutation instantanée.
-- États internes Q8 (8 bits fractionnaires) pour limiter l'erreur de quantification des filtres graves ; saturation interne à +/-131071 en unité audio, sortie à +/-131071.
+- États internes Q8 (8 bits fractionnaires) pour limiter l'erreur de quantification des filtres graves ; saturation interne Q8 à +/-1048575 en unité audio, sortie à +/-1048575.
 - Coefficients fixes à 44,1 kHz ; aucun changement de fréquence
   d'échantillonnage n'est géré.
 - Les rampes de gain, les contrôles utilisateur, la persistance FUN7 et le
