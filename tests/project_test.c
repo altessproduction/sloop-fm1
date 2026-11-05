@@ -523,6 +523,15 @@ int main(void)
     q2 = q;
     bad += check("2.6 SAVE > PROJECT > ERASE: an object of no bytes is no project (an empty slot, older SLOOP too)",
                  !proj_import(&q2, &q, 0));
+    {   /* ROOTS DUB SysEx bridge: 7-bit editor values <-> Q15 FUN7 runtime. */
+        uint8_t in[4] = {0u, 32u, 96u, 255u}, out[4], enabled;
+        proj_roots_set(2u, in);                    /* enabled is a normalized boolean; gain 255 clamps to 127 */
+        proj_roots_get(&enabled, out);
+        ok = enabled == 1u && out[0] == 0u && out[1] == 32u && out[2] == 96u && out[3] == 127u &&
+             proj_roots_gain[0] == 0u && proj_roots_gain[3] == 32768u;
+        bad += check("ROOTS DUB editor bridge: Q15/7-bit conversion, unity, mute, clamping and enabled normalization", ok);
+        proj_roots_set(0u, (const uint8_t[]){127u, 127u, 127u, 127u});
+    }
     printf("%s\n", bad ? "PROJECT FORMAT TEST FAILED" : "project format test passed");
     return bad != 0;
 }
