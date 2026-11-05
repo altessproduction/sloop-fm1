@@ -42,8 +42,11 @@ inchangée et devient lecture seule.
 ## Autosave, backup et éditeur
 
 - Faire pointer l'autosave sur le format courant, avec migration à l'ouverture.
-- Étendre les sauvegardes complètes de l'éditeur avec un nouvel identifiant
-  d'objet/version; les anciennes sauvegardes doivent continuer à se restaurer.
+- Conserver les mêmes identifiants d'objets de backup : les objets projet 0..4
+  sont validés par `proj_import`, qui doit accepter FUN7 et convertir FUN6.
+  Le format JSON de backup n'a pas besoin d'un nouvel identifiant si le contenu
+  binaire est validé par magic, taille et checksum. Tester les backups FUN6
+  existants et les exports/restaurations FUN7.
 - Ajouter quatre commandes de contrôle dans une page ROOTS DUB dédiée, avec
   WATCH/push pour que le navigateur reflète les changements du panneau matériel.
 - Tester les exports/imports de projets et de backups, pas seulement le chemin
@@ -109,3 +112,15 @@ FUN6/FUN5/FUN4/FUN3/FUN2/FUN1. La migration ne peut donc pas consister à
 ajouter simplement un champ à `project_t` : il faut figer une structure
 `project_v6_t`, introduire FUN7 comme format courant, agrandir l'union
 temporaire et vérifier les chemins backup/restore ainsi que l'autosave.
+
+
+### Backup/restore : correction du contrat
+
+La lecture de `project_restore()` confirme que les objets projet du backup
+passent par `proj_import()` avant écriture. Il n'est donc pas nécessaire
+d'inventer un nouvel identifiant d'objet de backup : les IDs existants restent
+stables, et c'est le parseur projet qui accepte FUN6 et FUN7. Le buffer de
+staging doit simplement pouvoir contenir le plus grand format, et les tests
+doivent couvrir une restauration d'un ancien FUN6 ainsi qu'un aller-retour
+FUN7. Cette compatibilité doit aussi être vérifiée pour l'objet autosave et les
+quatre sections, pas seulement pour un import isolé.
