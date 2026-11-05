@@ -101,6 +101,16 @@ int main(void)
     bad += check("other objects untouched", st_load(OBJ_PROJECT0 + 1, got, sizeof got) < 0);
     bad += check("settings save/load",
                  st_save(OBJ_SETTINGS, "hello", 5) == 0 && st_load(OBJ_SETTINGS, got, 5) == 5 && !memcmp(got, "hello", 5));
+    {
+        static uint8_t max_payload[ST_PAYLOAD_MAX], max_read[ST_PAYLOAD_MAX];
+        memset(max_payload, 0x5A, sizeof max_payload);
+        bad += check("maximum 3840-byte payload saves and loads",
+                     st_save(OBJ_PROJECT0 + 3u, max_payload, sizeof max_payload) == 0 &&
+                     st_load(OBJ_PROJECT0 + 3u, max_read, sizeof max_read) == (int)sizeof max_read &&
+                     !memcmp(max_payload, max_read, sizeof max_payload));
+        bad += check("payload larger than 3840 bytes is refused",
+                     st_save(OBJ_PROJECT0 + 3u, max_payload, sizeof max_payload + 1u) < 0);
+    }
     bad += check("CRC-32 is zlib's (check value 0xCBF43926)", st_crc32("123456789", 9) == 0xCBF43926u);
     memset(nor, 0xFF, sizeof nor);
     st_save(OBJ_PROJECT0 + 2, a, sizeof a);
