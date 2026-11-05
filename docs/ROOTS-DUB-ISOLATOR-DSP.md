@@ -33,7 +33,7 @@ Avant sommation, SUB traverse les all-pass à 350 Hz et 2,5 kHz ; BASS traverse
 celui à 2,5 kHz. La somme complexe d'un couple LP4 + HP4 correspond à un seul biquad all-pass
 du second ordre, avec numérateur renversé ; il ne faut pas le doubler.
 
-Le module contient 12 biquads de séparation et 6 de compensation par canal,
+Le module contient 12 biquads de séparation et 3 de compensation par canal,
 soit 15 par canal et 30 en stéréo. L'ordre de grandeur est d'environ 150
 multiplications par échantillon stéréo. Ce coût doit être mesuré sur le FM-1
 avant toute intégration.
