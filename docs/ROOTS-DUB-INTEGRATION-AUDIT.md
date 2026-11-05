@@ -152,8 +152,8 @@ Le format FUN7 est maintenant spécifié plus précisément : 12 octets de confi
 
 Les prototypes ont progressé depuis cet audit initial :
 
-- Le module autonome `roots_lr4_isolator.h` remplace désormais la topologie à un pôle pour les essais de séparation : trois crossovers LR4 fixes Q30 et compensation all-pass des bandes SUB/BASS.
-- Le laboratoire Web Audio `roots-dub-lab.html` applique lui aussi cette compensation : SUB traverse les all-pass à 350 Hz et 2,5 kHz ; BASS traverse celui à 2,5 kHz.
+- Le module autonome `roots_lr4_isolator.h` remplace désormais la topologie à un pôle pour les essais de séparation : trois crossovers LR4 fixes Q30, un all-pass par crossover ultérieur, et états internes Q8 pour limiter les erreurs de quantification.
+- Le laboratoire Web Audio `roots-dub-lab.html` applique lui aussi cette compensation : un all-pass à 350 Hz puis un à 2,5 kHz sur SUB ; un all-pass à 2,5 kHz sur BASS.
 - `tests/roots_lr4_isolator_test.c` vise la reconstruction unitaire à ±0,5 % et balaie les 15 masques non vides sur une grille de fréquences. Un défaut de portée de la grille a été corrigé.
 - `web/test_web.mjs` contient maintenant des contrôles statiques de la topologie all-pass et de la syntaxe JavaScript du laboratoire.
 - Le format FUN7 est implémenté sur la branche avec migration FUN1..FUN6 et gains Roots neutres pour les anciens projets.
