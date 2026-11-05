@@ -28,7 +28,17 @@ int main(void)
     for(i=0;i<1000;i++){x=(int32_t)(i*7919u)-3950000;CHECK(roots_lr4_process(&s,x)==x,"bypass exact");}
     s.enabled=1;
     for(i=0;i<4;i++) s.gain[i]=0;
+    for(i=0;i<64;i++) (void)roots_lr4_process(&s,(i&1)?50000:-50000);
+    CHECK(s.wet==32768u,"enable ramp reaches fully wet in 64 samples");
     for(i=0;i<1000;i++) CHECK(roots_lr4_process(&s,(i&1)?50000:-50000)==0,"all mute");
+    s.enabled=0;
+    for(i=0;i<64;i++) (void)roots_lr4_process(&s,(i&1)?50000:-50000);
+    CHECK(s.wet==0u && !s.running,"disable ramp returns to exact bypass");
+    x=12345;
+    CHECK(roots_lr4_process(&s,x)==x,"bypass remains bit-identical after disable");
+    s.enabled=1;
+    for(i=0;i<64;i++) (void)roots_lr4_process(&s,10000);
+    CHECK(s.wet==32768u && s.running,"re-enable restarts filter state and fades in");
     roots_lr4_init(&s); s.enabled=1;
     for(i=0;i<4;i++) s.gain[i]=32768;
     for(i=0;i<100000;i++) y=roots_lr4_process(&s,10000);
