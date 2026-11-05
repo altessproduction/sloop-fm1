@@ -25,7 +25,7 @@ Le signal de test passe dans quatre branches parallèles :
 - MIDS : passe-haut à 350 Hz puis passe-bas à 2 500 Hz, deux étages par filtre.
 - TOPS : passe-haut à 2 500 Hz, deux étages Butterworth.
 
-Chaque branche possède un gain indépendant de -24 à +6 dB. Les pentes visées sont des Linkwitz–Riley d'ordre 4 (cascades de deux Butterworth d'ordre 2). Les fréquences sont provisoires et le navigateur utilise les biquads de Web Audio.
+Chaque branche possède un gain indépendant de -24 à +6 dB. Les pentes visées sont des Linkwitz–Riley d'ordre 4 (cascades de deux Butterworth d'ordre 2). Pour réaligner les phases avant sommation, SUB traverse les all-pass LR4 à 350 Hz et 2 500 Hz ; BASS traverse celui à 2 500 Hz. Ces all-pass sont eux-mêmes deux biquads `allpass` en cascade. Les fréquences sont provisoires et le navigateur utilise les biquads de Web Audio.
 
 ## Limites et prochaines validations
 
@@ -34,10 +34,15 @@ Ce laboratoire est volontairement indépendant du firmware SLOOP :
 - Il ne modifie aucun fichier C, aucune table de paramètres et aucun preset.
 - Il n'échange pas de SysEx avec le FM-1.
 - Il ne partage pas le code DSP en virgule fixe de SLOOP.
-- La réponse de sommation, la phase, les transitoires et le niveau crête doivent être mesurés avec un balayage et un analyseur avant de figer les fréquences de coupure.
+- La somme à gains unitaires est compensée en phase dans le graphe Web Audio ; elle doit néanmoins être mesurée avec un balayage, ainsi que les réponses de chaque bande, les transitoires et le niveau crête.
 - Le prototype ne prouve ni le budget CPU/RAM ni la faisabilité temps réel sur le microcontrôleur.
 - Le son de sirène est une maquette Web Audio, pas un nouveau moteur firmware.
 
 ## Vérifications effectuées
 
 Le contenu HTML et le bloc JavaScript ont été relus depuis la branche GitHub. Le bloc JavaScript a passé une vérification de syntaxe ECMAScript. Ce contrôle statique ne remplace pas un essai d'écoute dans un navigateur, les tests de non-régression SLOOP, une compilation cible ou un essai sur FM-1.
+
+
+## Mise à jour — compensation de phase
+
+Le graphe du laboratoire applique désormais la même stratégie de compensation que le prototype C LR4 : deux biquads all-pass à 350 Hz puis deux à 2 500 Hz sur SUB, et deux à 2 500 Hz sur BASS. Le test web vérifie la présence de ces branches et compile le bloc JavaScript pour détecter les erreurs de syntaxe. Cela reste un contrôle statique : il ne mesure pas la réponse fréquentielle réelle du navigateur.
