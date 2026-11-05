@@ -24,7 +24,7 @@ int main(void)
 {
     roots_lr4_t s; unsigned i; int32_t x,y;
     const double f[]={20,30,60,120,240,350,700,1000,2500,5000,10000,20000};
-    CHECK(sizeof(roots_lr4_t)<=264u,"stereo channel state stays within 264 bytes");
+    CHECK(sizeof(roots_lr4_t)<=264u,"per-channel state stays within 264 bytes");
     roots_lr4_init(&s);
     for(i=0;i<1000;i++){x=(int32_t)(i*7919u)-3950000;CHECK(roots_lr4_process(&s,x)==x,"bypass exact");}
     s.enabled=1;
