@@ -40,8 +40,11 @@ int main(void)
         }
     }
     for(i=1;i<16;i++) {
-        double a=measure(997.0,(int)i);
-        CHECK(a>=0.0 && a<1.02,"all 15 band masks remain bounded");
+        unsigned k;
+        for(k=0;k<sizeof(f)/sizeof(f[0]);k++) {
+            double a=measure(f[k],(int)i);
+            CHECK(a>=0.0 && a<1.02,"all 15 band masks remain bounded across the audio band");
+        }
     }
     roots_lr4_init(&s); s.enabled=1;
     for(i=0;i<100000;i++){x=(i&1)?131071:-131071;y=roots_lr4_process(&s,x);
