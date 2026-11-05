@@ -115,6 +115,8 @@ An absent status byte retains the original reply format.
 | 69 FM6_PUT | target, index, the 128-byte packed patch | target, index, rc |
 | 70 FM6_LIST | — | factory count, bank count, then per slot (factory first): used (0/1), name string ("" if empty) |
 | 71 FM6_ERASE | bank index | index, rc |
+| 78 ROOTS_GET | — | enabled, SUB, BASS, MIDS, TOPS (0..127; 127 = unity) |
+| 79 ROOTS_SET | enabled, SUB, BASS, MIDS, TOPS | normalized enabled and quantized gains |
 
 **pack7:** groups of up to 7 bytes, each preceded by one byte holding their top bits
 (bit j = bit 7 of byte j).
@@ -488,3 +490,8 @@ before 2.7 does not answer `LIVE`: the page keeps its mixer and keys (TRACK_MIX,
   Felucca's own storage; never the app or the update area. Since SLOOP 2.4 every one of them, and
   `BK_PUT` of a preset bank, answers rc 3 while the song plays (as the panel refuses to save then): a
   flash erase silences the audio for about 50 ms.
+
+
+## ROOTS DUB
+
+Commands 78/79 read and write four 7-bit gains stored as Q15 values in the current FUN7 project. Enabled is normalized to 0/1. Gain 127 is unity (Q15 32768); 0 is mute. SET updates runtime state; normal project capture and autosave persist it. The commands expose settings only: the LR4 processor is not yet connected to the master audio path.
