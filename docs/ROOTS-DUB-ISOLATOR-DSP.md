@@ -1,148 +1,85 @@
-# ROOTS DUB isolator — standalone DSP module
+# ROOTS DUB isolator — prototypes DSP autonomes
 
-This increment adds a fixed-point C implementation and a host test, without
-connecting it to the FM-1 master path yet.
+Les deux modules de ce dossier restent des prototypes autonomes. Aucun n'est
+raccordé au bus maître du FM-1. Les coefficients sont calculés pour 44,1 kHz.
 
-## Signal topology
+## Ancien prototype à un pôle
 
-The signal is split successively at 120 Hz, 350 Hz and 2.5 kHz. Each split
-uses two cascaded one-pole low-pass sections. The high output is the exact
-sample-domain residual (input minus low), so low plus high reconstructs the
-input before band gains, apart from integer rounding. This complementary
-residual topology avoids assuming independently designed low/high filters sum
-flat. It is a conservative first implementation, not a Linkwitz–Riley or
-steep 24 dB/octave DJ isolator.
+`firmware/src/roots_isolator.h` conserve une séparation douce SUB/BASS/MIDS/TOPS.
+La simulation de sa réponse a révélé un recouvrement trop important, avec une
+amplitude MIDS supérieure à l'entrée autour de 350 Hz. Il ne convient donc pas
+à un isolateur DJ final.
 
-All arithmetic is integer/fixed-point. Gains are Q15 (32768 = unity; 0 = mute).
-The module clamps input/output to +/-131071 to keep accumulation bounded.
-When disabled, it returns the input bit-for-bit and leaves filter state alone.
+## Prototype LR4 fixe
 
-## Limitations before integration
+`firmware/src/roots_lr4_isolator.h` réalise trois crossovers Linkwitz–Riley
+4e ordre à 120 Hz, 350 Hz et 2,5 kHz. Chaque passe-bas et passe-haut est formé
+de deux biquads Butterworth identiques (Q = 1/sqrt(2)), en Q30. Le calcul est
+direct-form I avec accumulateur 64 bits et états audio saturés.
 
-- Coefficients are for 44.1 kHz only.
-- Cutoff slopes are gentle (two cascaded one-pole sections).
-- Mono per call: instantiate one state per stereo channel.
-- Parameter controls, smoothing, persistence and master-bus hook are not added.
-- The standalone test does not replace SLOOP's full regression suite.
-
-## Host test
-
-From repository root:
-
-    cc -std=c99 -Wall -Wextra -Ifirmware/src tests/roots_isolator_test.c -o /tmp/roots_isolator_test
-    /tmp/roots_isolator_test
-
-Tests cover bit-identical bypass, DC reconstruction at unity, all-band mute,
-TOPS rejection of DC, and bounded full-scale stress.
-
-
-## Analyse de réponse fréquentielle (simulation du prototype)
-
-Une simulation sinusoïdale à 44,1 kHz avec les coefficients actuels (`555, 1594, 9819`) confirme que les quatre bandes à gain unitaire se recomposent, mais révèle un recouvrement important lorsque l'on écoute une bande seule. Amplitudes de sortie estimées après établissement, rapportées à une sinusoïde d'entrée d'amplitude 1 :
-
-| Fréquence | SUB | BASS | MIDS | TOPS |
-|---:|---:|---:|---:|---:|
-| 30 Hz | 0,941 | 0,467 | 0,078 | 0,002 |
-| 120 Hz | 0,500 | 0,994 | 0,673 | 0,054 |
-| 350 Hz | 0,105 | 0,541 | **1,163** | 0,272 |
-| 1 kHz | 0,014 | 0,111 | 0,943 | 0,643 |
-| 2,5 kHz | 0,002 | 0,019 | 0,514 | 0,978 |
-| 5 kHz | 0,001 | 0,005 | 0,209 | 1,020 |
-
-Ces chiffres sont une simulation du modèle de filtres, pas une mesure sur FM-1. Le dépassement MIDS à 350 Hz est un signal d'alarme : le prototype n'est pas encore un isolateur DJ à bandes bien séparées. Des gains de bande extrêmes peuvent également créer des crêtes supérieures à l'entrée, avant même le limiteur maître.
-
-**Décision : ne pas raccorder cette topologie au master bus comme isolateur final.** Garder le module comme banc d'essai et concevoir une vraie séparation complémentaire à pentes contrôlées (par exemple crossover Linkwitz–Riley 4e ordre), puis mesurer sommation, phase, crêtes et réponse pour les 15 combinaisons de bandes avant intégration. Les tests actuels de bypass, reconstruction DC et bornage ne suffisent pas à qualifier un isolateur musical.
-
-
-## Conception de remplacement : crossover Linkwitz–Riley 4e ordre
-
-La prochaine version doit remplacer les trois séparations à un pôle par une
-cascade de crossovers LR4. Pour chaque fréquence de coupure (120, 350 et
-2 500 Hz), construire un passe-bas et un passe-haut LR4, chacun composé de
-deux biquads Butterworth identiques (`Q = 1/sqrt(2)`). Le passe-bas devient
-la bande courante ; le passe-haut alimente le séparateur suivant :
+Topologie de séparation :
 
 ```
 entrée -> LR4 @ 120 Hz -> SUB (LP) + reste (HP)
 reste  -> LR4 @ 350 Hz -> BASS (LP) + reste (HP)
-reste  -> LR4 @ 2.5 kHz -> MIDS (LP) + TOPS (HP)
+reste  -> LR4 @ 2,5 kHz -> MIDS (LP) + TOPS (HP)
 ```
 
-Pour un biquad bilinéaire à fréquence d'échantillonnage `fs`, poser
-`K = tan(pi * fc / fs)`, `D = 1 + sqrt(2)*K + K*K`.
-Les coefficients normalisés sont :
+### Compensation de phase
 
-- passe-bas : `b0=K*K/D, b1=2*b0, b2=b0`
-- passe-haut : `b0=1/D, b1=-2*b0, b2=b0`
-- les deux : `a1=2*(K*K-1)/D, a2=(1-sqrt(2)*K+K*K)/D`
+Un couple LR4 LP+HP est un all-pass, pas un fil de phase nulle. Dans la cascade,
+les bandes basses subissent donc moins de déphasage que les bandes hautes.
+Avant sommation, SUB traverse les all-pass à 350 Hz et 2,5 kHz ; BASS traverse
+celui à 2,5 kHz. Chaque all-pass LR4 est constitué de deux biquads all-pass du
+second ordre avec numérateur renversé.
 
-Chaque biquad est exécuté deux fois en cascade pour obtenir LR4. Quantifier
-les coefficients en Q30 (ou Q28 si les mesures CPU le justifient), garder les
-états en 64 bits si nécessaire, et saturer les conversions vers l'audio
-32 bits. Calculer les coefficients hors de l'ISR : ils sont constants à 44,1
-kHz pour cette première version.
+Le module contient 12 biquads de séparation et 6 de compensation par canal,
+soit 18 par canal et 36 en stéréo. L'ordre de grandeur est d'environ 180
+multiplications par échantillon stéréo. Ce coût doit être mesuré sur le FM-1
+avant toute intégration.
 
-### Structure et coût à mesurer
+### Contrat logiciel
 
-Trois séparateurs × (deux biquads passe-bas + deux passe-haut) = 12 biquads
-par canal. La compensation all-pass ajoute 6 biquads par canal (SUB à 350 et
-2 500 Hz, BASS à 2 500 Hz), soit 18 par canal et 36 pour la stéréo. Avec cinq
-multiplications par biquad, l'ordre de grandeur est de 180 multiplications par
-échantillon stéréo. Les états sont indépendants par canal. Ce coût doit être
-mesuré sur le FM-1 avant toute activation.
+- Une instance d'état par canal ; ne jamais partager les états gauche/droite.
+- Gains Q15 : 32768 = unité, 0 = coupure.
+- Bypass exact : l'échantillon est renvoyé bit pour bit et les états restent
+  figés.
+- Saturation interne/sortie à +/-131071.
+- Coefficients fixes à 44,1 kHz ; aucun changement de fréquence
+  d'échantillonnage n'est géré.
+- Les rampes de gain, les contrôles utilisateur, la persistance FUN7 et le
+  raccordement au bus maître ne sont pas encore implémentés.
 
-### Tests d'acceptation avant raccordement
+## Tests
 
-1. Réponse de la somme des quatre bandes à gains unitaires : écart inférieur
-   à ±0,1 dB sur 20 Hz–20 kHz (hors limites de quantification).
-2. Pentes d'atténuation conformes au LR4 : environ 24 dB/octave de chaque
-   côté de chaque coupure, sans bosse excessive à la coupure.
-3. Vérifier les 15 combinaisons non vides de bandes (gain 0 ou 1), en réponse
-   fréquentielle et en crête temporelle.
-4. Vérifier la stabilité après silence, transitions bypass/enable, et
-   changement de gain sans clic (rampe de gain par bloc).
-5. Mesurer la consommation CPU et RAM sur la cible, ainsi que la marge de
-   crête avec les quatre bandes à +gain maximal autorisé.
-6. Garder un bypass strictement bit-identique quand l'effet est désactivé.
+Le test `tests/roots_lr4_isolator_test.c` est référencé dans
+`tests/run_tests.sh` après le test du prototype historique. Il couvre :
 
-Cette conception est une spécification de travail, pas encore une
-implémentation validée. Le prototype actuel reste séparé du bus maître.
+1. bypass bit-identique ;
+2. coupure des quatre bandes ;
+3. reconstruction DC à gain unitaire ;
+4. réponse de la somme des bandes à ±0,5 % sur des fréquences de 20 Hz à 20 kHz ;
+5. les 15 masques non vides sur la même grille de fréquences ;
+6. bornage sous excitation pleine échelle.
 
+Le script complet exige d'abord le build SDK (`./build.sh`). Dans cet
+environnement de travail, le checkout local et le SDK JieLi ne sont pas
+disponibles : le test LR4 n'a donc pas encore été compilé/exécuté ici. Les
+résultats de simulation double précision précédents ne valident pas les
+arrondis du code C fixe, ses transitoires, ni le matériel.
 
-## Prototype LR4 à coefficients fixes (non intégré)
+## Conditions avant intégration
 
-Un second module expérimental, `firmware/src/roots_lr4_isolator.h`, met en
-œuvre les trois séparateurs avec des biquads Butterworth en Q30 et une forme
-directe I à accumulateur 64 bits. Il fournit deux sections passe-bas et deux
-passe-haut par séparateur, un état indépendant par canal, des gains Q15 et un
-bypass exact. Le test associé est `tests/roots_lr4_isolator_test.c`.
+- Exécuter les tests C dans un checkout complet et corriger tout écart mesuré.
+- Mesurer les courbes des quatre sorties séparées, pas seulement leur somme.
+- Mesurer crêtes et transitoires pour les 15 masques et tous les gains autorisés.
+- Ajouter une rampe de gain sans clic et définir une marge de headroom.
+- Mesurer CPU et RAM sur la cible FM-1.
+- Vérifier le signal stéréo, USB FULL, visualiseur et bypass après insertion au
+  point d'injection identifié dans l'audit technique.
+- Valider firmware, WASM, écoute réelle et flash matériel avant de déclarer
+  l'isolateur prêt.
 
-La première cascade LR4 sans compensation présentait un creux de recomposition. Ce défaut a conduit à ajouter les chemins all-pass décrits ci-dessous. Les mesures restent des tests logiciels à 44,1 kHz, pas des mesures sur le FM-1 physique.
-
-
-## Compensation de phase LR4 — mise à jour
-
-La cascade série ne peut pas simplement additionner les sorties LP et HP de
-chaque séparateur : le couple LR4 forme un all-pass, pas un fil de phase nulle.
-Les branches basses doivent donc traverser les all-pass des séparateurs
-ultérieurs avant sommation. Le module ajoute trois chemins de compensation :
-SUB à 350 Hz puis 2,5 kHz, et BASS à 2,5 kHz. Chaque all-pass LR4 est constitué
-de deux biquads all-pass du second ordre utilisant le dénominateur du
-Butterworth et le numérateur renversé.
-
-La simulation en double précision de cette topologie donne une recomposition
-unitaire (écart inférieur à 0,001 % sur les fréquences échantillonnées de
-20 Hz à 20 kHz). Le test C est resserré à ±0,5 % pour tenir compte de la
-quantification et des arrondis fixes. Il reste à exécuter ce test sur un
-checkout complet, mesurer le coût CPU sur le FM-1 et vérifier les transitoires
-et les crêtes à tous les réglages.
-
-
-## État actuel du prototype LR4
-
-Le code fixe les tableaux d'états pour les trois séparateurs et applique les
-compensations all-pass aux branches SUB et BASS. Le test C couvre bypass,
-muting, réponse de recomposition à ±0,5 %, masques de bandes et saturation.
-Attention : ces assertions sont écrites mais ne constituent pas une preuve
-d'exécution tant que le test n'a pas été compilé et lancé sur un checkout. Le
-module reste non intégré au bus maître, et le coût CPU cible n'est pas mesuré.
+**Décision actuelle :** conserver le LR4 comme prototype isolé. Ne pas
+l'intégrer au master bus ni fusionner cette PR avant validation logicielle et
+mesures sur la cible.
