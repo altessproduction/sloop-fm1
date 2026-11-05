@@ -23,7 +23,7 @@ Dans `firmware/src/fx.c` :
 - les bus sont calculés dans `fx_buses()`;
 - le mix stéréo passe ensuite par le ducking, DUST, le filtre DJ global `G_FILT`, le traitement master, le limiteur et le knee de sortie.
 
-Conséquence : un isolateur général 4 bandes doit être placé dans le chemin master, après la sommation des pistes et avant le traitement final/limiteur. Le mettre dans chaque piste changerait le comportement des sends et multiplierait inutilement le coût CPU.
+Conséquence : le point d’insertion le plus cohérent pour un isolateur général est dans `mix_block()`, après `dust_process()`, `punch_process()` et `djf_process()`, mais avant l’application du MASTER et l’appel à `lim_block()`. À cet endroit, il traite le mix complet, les retours d’effets et la texture, sans modifier les sends individuels. Le mettre dans chaque piste changerait le comportement des sends et multiplierait inutilement le coût CPU.
 
 ### 2. Le DSP actuel est majoritairement entier/fixed-point
 
@@ -59,7 +59,7 @@ Cela interdit de supposer qu’un simple `G_COUNT++` ou `P_COUNT++` sera sauvega
 
 ### Emplacement
 
-Un seul traitement stéréo sur le bus master, inséré après les effets master existants qui doivent être entendus dans les bandes et avant le limiteur final. Le point exact d’insertion doit être confirmé en traçant le bloc complet de rendu dans `fx.c` avant le premier commit DSP.
+Un seul traitement stéréo sur le bus master, inséré dans `mix_block()` après `dust_process()`, `punch_process()` et `djf_process()`, puis avant le gain MASTER et le limiteur. Ce point a été confirmé par lecture du chemin complet de `mix_block()`.
 
 ### Banque de filtres
 
