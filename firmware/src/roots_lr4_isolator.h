@@ -18,7 +18,8 @@ typedef struct {
     roots_lr4_biquad_state_t lp[3][2], hp[3][2];
     roots_lr4_biquad_state_t allpass[3][2]; /* SUB@350, SUB@2500, BASS@2500 */
     int32_t gain[4]; /* Q15, unity = 32768 */
-    uint8_t enabled;
+    uint16_t wet; /* Q15 dry/wet transition, 64-sample ramp */
+    uint8_t enabled, running;
 } roots_lr4_t;
 
 /* Normalized bilinear Butterworth biquad coefficients, Q30, 44.1 kHz.
@@ -74,13 +75,43 @@ static inline void roots_lr4_init(roots_lr4_t *s)
     s->gain[0]=s->gain[1]=s->gain[2]=s->gain[3]=32768;
 }
 
-/* One instance per channel. Bypass is bit-identical and freezes all states. */
+/* One instance per channel. Bypass is bit-identical at rest. Enable/disable
+ * crossfades over 64 samples; re-enable starts with clean filter histories. */
 static inline int32_t roots_lr4_process(roots_lr4_t *s, int32_t input)
 {
-    int32_t rest=input, bands[4];
+    int32_t rest=input, bands[4], filtered, out;
     int64_t mix=0;
     unsigned i,j;
-    if (!s->enabled) return input;
+    if (!s->enabled && s->wet == 0u) { s->running=0u; return input; }
+    if (!s->running) {
+        memset(s->lp,0,sizeof(s->lp));
+        memset(s->hp,0,sizeof(s->hp));
+        memset(s->allpass,0,sizeof(s->allpass));
+        s->running=1u;
+    }
+    rest=roots_lr4_sat(rest);
+    for (i=0;i<3;i++) {
+        int32_t lo=rest, hi=rest;
+        for (j=0;j<2;j++) {
+            lo=roots_lr4_biquad(lo,&s->lp[i][j],&roots_lr4_lp_coeff[i]);
+            hi=roots_lr4_biquad(hi,&s->hp[i][j],&roots_lr4_hp_coeff[i]);
+        }
+        bands[i]=lo;
+        rest=hi;
+    }
+    bands[3]=rest;
+    bands[0]=roots_lr4_allpass(bands[0],s->allpass[0],&roots_lr4_ap_coeff[1]);
+    bands[0]=roots_lr4_allpass(bands[0],s->allpass[1],&roots_lr4_ap_coeff[2]);
+    bands[1]=roots_lr4_allpass(bands[1],s->allpass[2],&roots_lr4_ap_coeff[2]);
+    for (i=0;i<4;i++) mix+=(int64_t)bands[i]*s->gain[i];
+    filtered=roots_lr4_sat(mix >> 15);
+    if (s->enabled) s->wet = s->wet > 32255u ? 32768u : (uint16_t)(s->wet + 512u);
+    else s->wet = s->wet < 512u ? 0u : (uint16_t)(s->wet - 512u);
+    if (s->wet == 0u) { s->running=0u; return input; }
+    out=roots_lr4_sat(((int64_t)input*(32768u-s->wet) + (int64_t)filtered*s->wet) >> 15);
+    return out;
+}
+#endif
     rest=roots_lr4_sat(rest);
     for (i=0;i<3;i++) {
         int32_t lo=rest, hi=rest;
@@ -99,7 +130,4 @@ static inline int32_t roots_lr4_process(roots_lr4_t *s, int32_t input)
     bands[0]=roots_lr4_allpass(bands[0],s->allpass[0],&roots_lr4_ap_coeff[1]);
     bands[0]=roots_lr4_allpass(bands[0],s->allpass[1],&roots_lr4_ap_coeff[2]);
     bands[1]=roots_lr4_allpass(bands[1],s->allpass[2],&roots_lr4_ap_coeff[2]);
-    for (i=0;i<4;i++) mix+=(int64_t)bands[i]*s->gain[i];
-    return roots_lr4_sat(mix >> 15);
-}
-#endif
+
