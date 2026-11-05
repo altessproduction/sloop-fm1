@@ -29,14 +29,14 @@ const HERE = fileURLToPath(new URL(".", import.meta.url));
 /* --------------------------------------------------------- ROOTS DUB audio lab --- */
 {
   const lab = readFileSync(join(HERE, "roots-dub-lab.html"), "utf8");
-  const script = lab.match(/<script>([\\s\\S]*?)<\\/script>/)?.[1];
+  const script = lab.match(/<script>([\s\S]*?)<\/script>/)?.[1];
   ok(!!script, "ROOTS DUB lab: inline audio script exists");
   if (script) {
     try { new vm.Script(script); ok(true, "ROOTS DUB lab: JavaScript syntax"); }
     catch (e) { ok(false, `ROOTS DUB lab: JavaScript syntax (${e.message})`); }
   }
-  ok((lab.match(/makeLR\\(ctx,'allpass',350\\)/g) || []).length === 1
-    && (lab.match(/makeLR\\(ctx,'allpass',2500\\)/g) || []).length === 2
+  ok((lab.match(/makeLR\(ctx,'allpass',350\)/g) || []).length === 1
+    && (lab.match(/makeLR\(ctx,'allpass',2500\)/g) || []).length === 2
     && lab.includes("subAP350a,subAP350b,subAP2500a,subAP2500b")
     && lab.includes("bassAP2500a,bassAP2500b"),
     "ROOTS DUB lab: phase compensation on SUB and BASS branches");
