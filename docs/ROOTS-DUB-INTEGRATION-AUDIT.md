@@ -187,3 +187,18 @@ Ces tests ont été ajoutés au dépôt mais ne sont pas compilés/exécutés ic
 La relecture du test de dépassement a aussi corrigé son propre buffer : la source de test est maintenant allouée à 3 841 octets, de sorte que le scénario « taille supérieure à 3 840 » ne transmet pas un pointeur vers un tableau trop court. Le buffer de lecture reste limité à 3 840 octets.
 
 La restauration BK_PUT complète n'a volontairement pas été simulée par un faux test superficiel. `ed_backup()` dépend de l'éditeur, du staging partagé, de l'état transport, de la flash et des fonctions d'application UI/audio. Pour la tester correctement, il faut un banc d'intégration qui compile réellement cette unité avec des doubles cohérents de la flash et du runtime. En attendant, la vérification statique confirme l'ordre des contrôles : longueur/CRC de transfert, dispatch d'objet, puis validation/migration projet avant écriture flash. Les retours 2 (données invalides), 3 (transport actif) et 4 (flash/écriture indisponible) sont préservés.
+
+
+## Complément — banc hôte de restauration BK_PUT (2026-11-05)
+
+La relecture approfondie a retrouvé un banc d'intégration existant, plus complet que le test isolé initialement envisagé :
+
+- `tests/editor_host.c` inclut les vrais `storage.c`, `upreset.c`, `project.c` et `editor.c`, dans l'ordre de compilation firmware pertinent, avec `FELUCCA_FLASH=1`, `FELUCCA_OTA=1` et une image NOR de 1 Mio en RAM.
+- Les opérations erase/program respectent les contraintes NOR (bits seulement effaçables de 1 vers 0, pages de 256 octets) et disposent d'une injection de panne `fl_fail_at`.
+- `tests/editor_fuzz.c` en mode 6 exerce réellement LIST/GET/PUT/commit pour l'objet 0, restaure via le protocole SysEx, compare le projet capturé octet par octet, puis teste les sections et l'autosave/reprise.
+- Le mode 1 du même fuzzer génère aussi des contenus de sauvegarde de projets et les soumet au véritable chemin BK_PUT ; il mêle objets valides, migrés, mutés et transferts interrompus.
+- `tests/editor_fuzz.sh` compile ce banc sous AddressSanitizer et UndefinedBehaviorSanitizer, puis lance notamment les modes 1 et 6.
+
+Cela invalide l'hypothèse précédente selon laquelle le chemin éditeur complet n'avait pas de banc hôte : il en existe déjà un. En revanche, la couverture reste incomplète sur quelques assertions déterministes spécifiques à ROOTS DUB : restauration BK_PUT explicite d'un FUN6, CRC de transfert incorrect avec vérification de non-modification, échec programmé de flash lors de l'écriture d'une section avec vérification de conservation de l'ancienne copie, et cas de transfert incomplet vérifié par son code de retour. Le mode fuzz peut rencontrer certains de ces cas, mais ne constitue pas à lui seul une preuve ciblée et reproductible de chacun.
+
+La prochaine extension pertinente est donc d'ajouter ces scénarios déterministes à `tests/editor_fuzz.c` / `tests/editor_host.c`, en réutilisant les fonctions de construction de trames et le faux NOR existants. Ne pas créer un second banc de flash ni prétendre que ces scénarios sont déjà couverts. Aucun de ces tests n'a été exécuté dans cet environnement.
