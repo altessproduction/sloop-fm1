@@ -23,6 +23,7 @@ static double measure(double hz, int mask)
 int main(void)
 {
     roots_lr4_t s; unsigned i; int32_t x,y;
+    const double f[]={20,30,60,120,240,350,700,1000,2500,5000,10000,20000};
     roots_lr4_init(&s);
     for(i=0;i<1000;i++){x=(int32_t)(i*7919u)-3950000;CHECK(roots_lr4_process(&s,x)==x,"bypass exact");}
     s.enabled=1;
@@ -33,7 +34,6 @@ int main(void)
     for(i=0;i<100000;i++) y=roots_lr4_process(&s,10000);
     CHECK(abs(y-10000)<=5,"unity DC");
     {
-        const double f[]={20,30,60,120,240,350,700,1000,2500,5000,10000,20000};
         for(i=0;i<sizeof(f)/sizeof(f[0]);i++) {
             double a=measure(f[i],15);
             CHECK(a>0.995 && a<1.005,"phase-aligned unity sum response within +/-0.5%");
