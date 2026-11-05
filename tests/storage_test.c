@@ -102,7 +102,7 @@ int main(void)
     bad += check("settings save/load",
                  st_save(OBJ_SETTINGS, "hello", 5) == 0 && st_load(OBJ_SETTINGS, got, 5) == 5 && !memcmp(got, "hello", 5));
     {
-        static uint8_t max_payload[ST_PAYLOAD_MAX], max_read[ST_PAYLOAD_MAX];
+        static uint8_t max_payload[ST_PAYLOAD_MAX + 1u], max_read[ST_PAYLOAD_MAX];
         memset(max_payload, 0x5A, sizeof max_payload);
         bad += check("maximum 3840-byte payload saves and loads",
                      st_save(OBJ_PROJECT0 + 3u, max_payload, sizeof max_payload) == 0 &&
