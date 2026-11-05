@@ -24,7 +24,8 @@
 #ifndef UI_SMALL                 /* (2.7) compiled for size: not the audio path (gfx.c UI_SMALL); the host tests: nothing */
 #define UI_SMALL
 #endif
-#define PROJ_MAGIC 0x46554E36u                 /* "FUN6": format 5 + the 2.6 parameters, nudge and condition in a byte */
+#define PROJ_MAGIC 0x46554E37u                 /* "FUN7": FUN6 + persistent Roots Dub isolator settings */
+#define PROJ_MAGIC_V6 0x46554E36u              /* "FUN6": format 5 + 2.6 parameters, nudges and conditions */
 #define PROJ_MAGIC_V5 0x46554E35u              /* "FUN5": format 4 + per-step nudge, parameter locks, fill conditions (SLOOP 2.4) */
 #define PROJ_MAGIC_V4 0x46554E34u              /* "FUN4": four tracks, P_COUNT parameters each, 10-byte steps; read only */
 #define PROJ_MAGIC_V3 0x46554E33u              /* "FUN3": SLOOP 1.x; read only */
@@ -57,10 +58,19 @@ typedef struct {                               /* one track; the drum track igno
     uint8_t mf[NSTEP];                         /* each step's nudge (core.h MICRO_*, 6 bits) | its fill condition << 6 */
     plock_t lock[NLOCK];                       /* and its parameter locks (step LOCK_FREE = none) */
 } proj_trk_t;
-typedef struct {
+typedef struct {                               /* FUN6: immutable historical layout */
     uint32_t magic, size;
     int16_t g[PROJ_NG];
-    uint8_t sel, drdly, rsv[2];                /* the selected track; 2.5: G_DRDLY */
+    uint8_t sel, drdly, rsv[2];
+    proj_trk_t t[NTRK];
+    uint32_t sum;
+} project_v6_t;
+typedef struct {                               /* FUN7: current format */
+    uint32_t magic, size;
+    int16_t g[PROJ_NG];
+    uint8_t sel, drdly, rsv[2];
+    uint16_t roots_gain[4];                    /* Q15, 32768 = unity */
+    uint8_t roots_enabled, roots_rsv[3];
     proj_trk_t t[NTRK];
     uint32_t sum;
 } project_t;
@@ -149,7 +159,8 @@ typedef struct {                               /* format 1 (until 0.5 beta), rea
 } project_v1_t;
 _Static_assert(sizeof(project_v2_t) == 2552u && sizeof(project_v1_t) == 688u && sizeof(project_v3_t) == 2584u &&
                sizeof(project_v4_t) == 3112u && sizeof(project_v5_t) == 3840u, "formats 1 / 2 / 3 / 4 / 5 as they were stored");
-_Static_assert(sizeof(project_t) <= 3840u, "format 6 fits one flash object (storage.c ST_PAYLOAD_MAX)");
+_Static_assert(sizeof(project_v6_t) == 3816u, "FUN6 binary layout must remain immutable");
+_Static_assert(sizeof(project_t) == 3828u && sizeof(project_t) <= 3840u, "FUN7 fits one flash object (storage.c ST_PAYLOAD_MAX)");
 project_t proj_slot[4] __attribute__((section(".noinit")));
 
 UI_SMALL static uint32_t proj_hash(const void *p, uint32_t n)   /* FNV-1a over n bytes */
@@ -161,7 +172,20 @@ UI_SMALL static uint32_t proj_hash(const void *p, uint32_t n)   /* FNV-1a over n
     return s;
 }
 UI_SMALL static uint32_t proj_sum(const project_t *p) { return proj_hash(p, sizeof *p - 4u); }
+UI_SMALL static uint32_t proj_v6_sum(const project_v6_t *p) { return proj_hash(p, sizeof *p - 4u); }
 UI_SMALL static int proj_ok(const project_t *q) { return q->magic == PROJ_MAGIC && q->size == sizeof *q && q->sum == proj_sum(q); }
+UI_SMALL static int proj_v6_ok(const project_v6_t *q)
+{
+    return q->magic == PROJ_MAGIC_V6 && q->size == sizeof *q && q->sum == proj_v6_sum(q);
+}
+UI_SMALL static void proj_roots_neutral(project_t *p)
+{
+    uint32_t i;
+    for (i = 0; i < 4u; i++)
+        p->roots_gain[i] = 32768u;
+    p->roots_enabled = 0;
+    memset(p->roots_rsv, 0, sizeof p->roots_rsv);
+}
 
 /* ---- old formats -> format 5 */
 /* an old step into a synth step (no level, no ratchet) */
@@ -376,16 +400,42 @@ UI_SMALL static int proj_from_v1(project_t *q, const project_v1_t *v1, int n)
     return 1;
 }
 
-/* n bytes of a stored project (any format) -> slot q as format 5; 0 = not a project */
+/* FUN6 -> FUN7: preserve the historical bytes and add neutral Roots Dub settings. */
+UI_SMALL static int proj_from_v6(project_t *q, const project_v6_t *v6, int n)
+{
+    if (n != (int)sizeof *v6 || !proj_v6_ok(v6))
+        return 0;
+    memset(q, 0, sizeof *q);
+    q->magic = PROJ_MAGIC;
+    q->size = sizeof *q;
+    memcpy(q->g, v6->g, sizeof q->g);
+    q->sel = v6->sel;
+    q->drdly = v6->drdly;
+    memcpy(q->rsv, v6->rsv, sizeof q->rsv);
+    proj_roots_neutral(q);
+    memcpy(q->t, v6->t, sizeof q->t);
+    q->sum = proj_sum(q);
+    return 1;
+}
+
+/* n bytes of a stored project (any format) -> current FUN7 slot; 0 = not a project */
 UI_SMALL static int proj_import(project_t *q, const void *b, int n)
 {
+    int ok;
     if (n == (int)sizeof *q && proj_ok((const project_t *)b)) {
         memcpy(q, b, sizeof *q);
         return 1;
     }
-    return proj_from_v5(q, (const project_v5_t *)b, n) || proj_from_v4(q, (const project_v4_t *)b, n) ||
-           proj_from_v3(q, (const project_v3_t *)b, n) ||
-           proj_from_v2(q, (const project_v2_t *)b, n) || proj_from_v1(q, (const project_v1_t *)b, n);
+    if (proj_from_v6(q, (const project_v6_t *)b, n))
+        return 1;
+    ok = proj_from_v5(q, (const project_v5_t *)b, n) || proj_from_v4(q, (const project_v4_t *)b, n) ||
+         proj_from_v3(q, (const project_v3_t *)b, n) || proj_from_v2(q, (const project_v2_t *)b, n) ||
+         proj_from_v1(q, (const project_v1_t *)b, n);
+    if (ok) {
+        proj_roots_neutral(q);
+        q->sum = proj_sum(q);
+    }
+    return ok;
 }
 
 /* ---- the working project <-> a project_t */
@@ -561,7 +611,8 @@ static uint8_t sec_dirty, song_dirty;           /* live sections / the song: in 
 #if FELUCCA_FLASH
 /* slot from flash into RAM (format 5, or an old one converted) */
 static union {
-    project_t v6;
+    project_t v7;
+    project_v6_t v6;
     project_v5_t v5;
     project_v4_t v4;
     project_v3_t v3;
@@ -853,7 +904,7 @@ UI_SMALL static void persist_boot(void)                    /* before settings_in
                 proj_fetch(i);
             } else {
                 int n = st_load(OBJ_PROJECT0 + i, &proj_tmp, sizeof proj_tmp);
-                if (n != (int)sizeof proj_slot[i] || memcmp(&proj_tmp.v6, &proj_slot[i], sizeof proj_slot[i]))
+                if (n != (int)sizeof proj_slot[i] || memcmp(&proj_tmp.v7, &proj_slot[i], sizeof proj_slot[i]))
                     sec_dirty |= (uint8_t)(1u << i);
             }
     }
