@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FM1 ROOTS DUB — Audio Lab</title>
+<style>
+:root{color-scheme:dark;--bg:#101713;--panel:#1a241e;--line:#34483a;--ink:#f2f5eb;--muted:#aab9a8;--accent:#c5df65;--hot:#e6a45d}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#263629 0,#101713 60%);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+main{max-width:1000px;margin:auto;padding:28px 18px 60px}header{margin-bottom:24px}h1{font-size:clamp(27px,5vw,42px);line-height:1.1;margin:0 0 8px;letter-spacing:-1px}h2{font-size:20px;margin:0 0 8px}p{color:var(--muted);margin:5px 0}.eyebrow{color:var(--accent);font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px}.panel{background:linear-gradient(145deg,#202d24,#172019);border:1px solid var(--line);border-radius:15px;padding:18px;box-shadow:0 12px 35px #0003}.wide{grid-column:1/-1}
+button{background:var(--accent);color:#172015;border:0;border-radius:9px;padding:11px 16px;font-weight:800;cursor:pointer}button.secondary{background:#34483a;color:var(--ink);border:1px solid #526a55}button:disabled{opacity:.45;cursor:not-allowed}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}.control{margin:16px 0}.control-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:5px}.control label{font-weight:650}.value{font-variant-numeric:tabular-nums;color:var(--accent);font-weight:750}input[type=range]{width:100%;accent-color:var(--accent)}.bands{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin-top:14px}.band{border:1px solid var(--line);border-radius:11px;padding:12px;background:#111a14}.band strong{display:block;font-size:18px}.band small{color:var(--muted)}.meter{height:5px;background:#0b100c;border-radius:10px;overflow:hidden;margin-top:10px}.meter span{display:block;height:100%;width:50%;background:var(--accent)}
+.status{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}.dot{width:8px;height:8px;border-radius:50%;background:#71816f}.dot.on{background:var(--accent);box-shadow:0 0 12px var(--accent)}
+.note{border-left:3px solid var(--hot);padding:9px 12px;background:#33291e;color:#e8d7c3;border-radius:0 8px 8px 0;font-size:13px;margin-top:14px}
+footer{margin-top:18px;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body><main>
+<header><div class="eyebrow">SLOOP × FM1 · prototype navigateur</div><h1>ROOTS DUB <span style="color:var(--accent)">Audio Lab</span></h1><p>Laboratoire autonome pour explorer la sirène dub et l’isolateur 4 bandes avant intégration firmware.</p><div class="status"><span id="dot" class="dot"></span><span id="status">Audio arrêté — appuie sur Démarrer pour activer le son</span></div><div class="actions"><button id="start">Démarrer l’audio</button><button id="stop" class="secondary" disabled>Arrêter</button></div></header>
+<div class="grid">
+<section class="panel"><div class="eyebrow">01 · Instrument</div><h2>Dub Siren</h2><p>Oscillateur modulé, filtre résonant et écho avec feedback.</p>
+<div class="control"><div class="control-head"><label for="pitch">Hauteur</label><span class="value" id="pitchV">440 Hz</span></div><input id="pitch" type="range" min="90" max="1100" value="440"></div>
+<div class="control"><div class="control-head"><label for="sweep">Profondeur du sweep</label><span class="value" id="sweepV">65 %</span></div><input id="sweep" type="range" min="0" max="100" value="65"></div>
+<div class="control"><div class="control-head"><label for="rate">Vitesse LFO</label><span class="value" id="rateV">2.0 Hz</span></div><input id="rate" type="range" min="1" max="120" value="20"></div>
+<div class="control"><div class="control-head"><label for="cutoff">Filtre</label><span class="value" id="cutoffV">1800 Hz</span></div><input id="cutoff" type="range" min="250" max="8000" value="1800"></div>
+<div class="control"><div class="control-head"><label for="feedback">Feedback écho</label><span class="value" id="feedbackV">35 %</span></div><input id="feedback" type="range" min="0" max="82" value="35"></div>
+<div class="control"><div class="control-head"><label for="delay">Temps d’écho</label><span class="value" id="delayV">375 ms</span></div><input id="delay" type="range" min="80" max="900" value="375"></div>
+<div class="actions"><button id="siren" disabled>Déclencher la sirène</button><button id="release" class="secondary" disabled>Relâcher</button></div>
+<div class="note">Le bouton déclenche une enveloppe courte. Le son est généré localement par Web Audio ; aucun fichier audio externe.</div>
+</section>
+<section class="panel"><div class="eyebrow">02 · Master</div><h2>Isolateur 4 bandes</h2><p>Quatre sorties parallèles issues de croisements Linkwitz–Riley 4e ordre (deux biquads Butterworth en cascade par pente).</p>
+<div class="control"><div class="control-head"><label for="inputTone">Signal de test</label><span class="value" id="inputToneV">110 Hz</span></div><input id="inputTone" type="range" min="35" max="8000" value="110"></div>
+<div class="control"><div class="control-head"><label for="toneLevel">Niveau du signal</label><span class="value" id="toneLevelV">−18 dB</span></div><input id="toneLevel" type="range" min="-36" max="-6" value="-18"></div>
+<div class="actions"><button id="testTone" disabled>Jouer le signal de test</button><button id="muteTone" class="secondary" disabled>Couper le signal</button></div>
+<div class="bands">
+<div class="band"><strong>SUB</strong><small>Bas · 35–120 Hz</small><div class="control"><div class="control-head"><label for="sub">Gain</label><span class="value" id="subV">0 dB</span></div><input id="sub" type="range" min="-24" max="6" value="0"></div></div>
+<div class="band"><strong>BASS</strong><small>120–350 Hz</small><div class="control"><div class="control-head"><label for="bass">Gain</label><span class="value" id="bassV">0 dB</span></div><input id="bass" type="range" min="-24" max="6" value="0"></div></div>
+<div class="band"><strong>MIDS</strong><small>350–2500 Hz</small><div class="control"><div class="control-head"><label for="mids">Gain</label><span class="value" id="midsV">0 dB</span></div><input id="mids" type="range" min="-24" max="6" value="0"></div></div>
+<div class="band"><strong>TOPS</strong><small>2.5–20 kHz</small><div class="control"><div class="control-head"><label for="tops">Gain</label><span class="value" id="topsV">0 dB</span></div><input id="tops" type="range" min="-24" max="6" value="0"></div></div>
+</div>
+<div class="note">Les fréquences de coupure sont provisoires. Le prototype utilise des filtres passe-bas/passe-haut en cascade ; la somme, la phase et le niveau doivent encore être mesurés avant de transposer ce DSP en virgule fixe sur le FM-1.</div>
+</section>
+<section class="panel wide"><div class="eyebrow">03 · Notes techniques</div><h2>Ce que ce prototype valide — et ce qu’il ne valide pas</h2><p>Il permet d’écouter les principes de la sirène, du feedback et des gains par bande dans un navigateur moderne. Il ne réutilise pas encore le code C de SLOOP, ne parle pas au FM-1 en SysEx et ne garantit pas une réponse parfaitement plate à la sommation des bandes. Les filtres Web Audio servent ici de maquette fonctionnelle, pas de référence numérique pour le firmware.</p><footer>Prototype expérimental ROOTS DUB · sans dépendance externe · licence du dépôt parent à respecter lors de toute redistribution.</footer></section>
+</div></main>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+let ctx=null, master=null, osc=null, lfo=null, lfoGain=null, sirenGain=null, sirenFilter=null, delay=null, feedback=null, delayWet=null, toneOsc=null, toneGain=null, bandGains=[];
+const ids=['pitch','sweep','rate','cutoff','feedback','delay','inputTone','toneLevel','sub','bass','mids','tops'];
+const fmt = (id,v) => ({pitch:Math.round(v)+' Hz',sweep:Math.round(v)+' %',rate:(v/10).toFixed(1)+' Hz',cutoff:Math.round(v)+' Hz',feedback:Math.round(v)+' %',delay:Math.round(v)+' ms',inputTone:Math.round(v)+' Hz',toneLevel:(v<0?'−':'')+Math.abs(v)+' dB',sub:v+' dB',bass:v+' dB',mids:v+' dB',tops:v+' dB'}[id]);
+function updateLabels(){ids.forEach(id=>$(id+'V').textContent=fmt(id,+$(id).value))}
+function db(v){return Math.pow(10,v/20)}
+function makeLR(ctx,type,freq){const a=ctx.createBiquadFilter(),b=ctx.createBiquadFilter();a.type=b.type=type;a.frequency.value=b.frequency.value=freq;a.Q.value=b.Q.value=Math.SQRT1_2;return [a,b]}
+function chain(source,nodes){let last=source;nodes.forEach(n=>{last.connect(n);last=n});return last}
+function setup(){
+ctx=new (window.AudioContext||window.webkitAudioContext)();
+master=ctx.createGain();master.gain.value=.72;master.connect(ctx.destination);
+const input=ctx.createGain();input.gain.value=1;
+const [subLP1,subLP2]=makeLR(ctx,'lowpass',120);
+const [bassHP1,bassHP2]=makeLR(ctx,'highpass',120),[bassLP1,bassLP2]=makeLR(ctx,'lowpass',350);
+const [midHP1,midHP2]=makeLR(ctx,'highpass',350),[midLP1,midLP2]=makeLR(ctx,'lowpass',2500);
+const [topHP1,topHP2]=makeLR(ctx,'highpass',2500);
+const branches=[
+chain(input,[subLP1,subLP2]),
+chain(input,[bassHP1,bassHP2,bassLP1,bassLP2]),
+chain(input,[midHP1,midHP2,midLP1,midLP2]),
+chain(input,[topHP1,topHP2])
+];
+bandGains=branches.map((branch,i)=>{const g=ctx.createGain();g.gain.value=1;branch.connect(g);g.connect(master);return g});
+toneOsc=ctx.createOscillator();toneOsc.type='sine';toneOsc.frequency.value=110;toneGain=ctx.createGain();toneGain.gain.value=0;toneOsc.connect(toneGain);toneGain.connect(input);toneOsc.start();
+sirenGain=ctx.createGain();sirenGain.gain.value=0;sirenFilter=ctx.createBiquadFilter();sirenFilter.type='lowpass';sirenFilter.frequency.value=1800;sirenFilter.Q.value=8;
+osc=ctx.createOscillator();osc.type='sawtooth';osc.frequency.value=440;
+lfo=ctx.createOscillator();lfo.type='sine';lfo.frequency.value=2;lfoGain=ctx.createGain();lfoGain.gain.value=220;
+lfo.connect(lfoGain);lfoGain.connect(osc.frequency);osc.connect(sirenFilter);
+delay=ctx.createDelay(1.2);feedback=ctx.createGain();delayWet=ctx.createGain();delay.delayTime.value=.375;feedback.gain.value=.35;delayWet.gain.value=.35;
+const sirenBus=ctx.createGain();sirenFilter.connect(sirenBus);sirenBus.connect(master);sirenBus.connect(delay);delay.connect(delayWet);delayWet.connect(master);delay.connect(feedback);feedback.connect(delay);
+osc.start();lfo.start();
+}
+function audioOn(){if(!ctx)setup();ctx.resume();$('dot').classList.add('on');$('status').textContent='Audio actif · traitement local dans le navigateur';['siren','release','testTone','muteTone','stop'].forEach(id=>$(id).disabled=false);$('start').disabled=true;sync()}
+function audioOff(){if(!ctx)return;ctx.suspend();$('dot').classList.remove('on');$('status').textContent='Audio en pause';['siren','release','testTone','muteTone','stop'].forEach(id=>$(id).disabled=true);$('start').disabled=false}
+function sync(){if(!ctx)return;const v=id=>+$(id).value;osc.frequency.setTargetAtTime(v('pitch'),ctx.currentTime,.025);lfoGain.gain.setTargetAtTime(v('sweep')*3.2,ctx.currentTime,.025);lfo.frequency.setTargetAtTime(v('rate')/10,ctx.currentTime,.025);sirenFilter.frequency.setTargetAtTime(v('cutoff'),ctx.currentTime,.025);feedback.gain.setTargetAtTime(v('feedback')/100,ctx.currentTime,.025);delay.delayTime.setTargetAtTime(v('delay')/1000,ctx.currentTime,.025);delayWet.gain.setTargetAtTime(.25+v('feedback')/180,ctx.currentTime,.025);toneOsc.frequency.setTargetAtTime(v('inputTone'),ctx.currentTime,.025);toneGain.gain.setTargetAtTime(db(v('toneLevel')),ctx.currentTime,.025);['sub','bass','mids','tops'].forEach((id,i)=>bandGains[i].gain.setTargetAtTime(db(v(id)),ctx.currentTime,.025))}
+ids.forEach(id=>$(id).addEventListener('input',()=>{updateLabels();sync()}));
+$('start').onclick=audioOn;$('stop').onclick=audioOff;
+$('siren').onclick=()=>{if(!ctx)return;sirenGain.gain.cancelScheduledValues(ctx.currentTime);sirenGain.gain.setTargetAtTime(.22,ctx.currentTime,.015);sirenFilter.frequency.setTargetAtTime(+ $('cutoff').value,ctx.currentTime,.02);sirenFilter.connect(sirenGain);sirenGain.connect(master);sirenGain.connect(delay)};
+$('release').onclick=()=>{if(!ctx)return;sirenGain.gain.setTargetAtTime(0,ctx.currentTime,.12)};
+$('testTone').onclick=()=>{if(ctx)toneGain.gain.setTargetAtTime(db(+$('toneLevel').value),ctx.currentTime,.02)};
+$('muteTone').onclick=()=>{if(ctx)toneGain.gain.setTargetAtTime(0,ctx.currentTime,.02)};
+updateLabels();
+})();
+</script></body></html>
