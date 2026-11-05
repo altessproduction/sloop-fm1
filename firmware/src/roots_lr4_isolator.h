@@ -8,7 +8,7 @@
 #include <string.h>
 
 #define ROOTS_LR4_Q30 INT64_C(1073741824)
-#define ROOTS_LR4_MAX 131071
+#define ROOTS_LR4_MAX 1048575
 #define ROOTS_LR4_MAX_Q8 (ROOTS_LR4_MAX * 256)
 
 typedef struct {
