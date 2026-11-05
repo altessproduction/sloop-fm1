@@ -51,8 +51,11 @@ avant toute intégration.
 - États internes Q8 (8 bits fractionnaires) pour limiter l'erreur de quantification des filtres graves ; saturation interne Q8 à +/-1048575 en unité audio, sortie à +/-1048575.
 - Coefficients fixes à 44,1 kHz ; aucun changement de fréquence
   d'échantillonnage n'est géré.
-- Les rampes de gain, les contrôles utilisateur, la persistance FUN7 et le
-  raccordement au bus maître ne sont pas encore implémentés.
+- Les contrôles utilisateur (éditeur web v13, commandes SysEx 78/79) et la
+  persistance FUN7 sont implémentés, mais ils ne pilotent pas encore ce module.
+- Les rampes de gain par bande ne sont pas implémentées : un changement de gain
+  en cours de traitement peut donc produire un clic après raccordement.
+- Le raccordement au bus maître reste volontairement non implémenté.
 
 ## Tests
 
