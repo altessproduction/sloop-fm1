@@ -42,8 +42,10 @@ avant toute intégration.
 
 - Une instance d'état par canal ; ne jamais partager les états gauche/droite.
 - Gains Q15 : 32768 = unité, 0 = coupure.
-- Bypass exact : l'échantillon est renvoyé bit pour bit et les états restent
-  figés.
+- Bypass au repos exact : l'échantillon est renvoyé bit pour bit. À la désactivation,
+  une rampe dry/wet de 64 échantillons revient au bypass puis fige les états ; à la
+  réactivation, les historiques sont remis à zéro et une rampe de 64 échantillons
+  évite une commutation instantanée.
 - Saturation interne/sortie à +/-131071.
 - Coefficients fixes à 44,1 kHz ; aucun changement de fréquence
   d'échantillonnage n'est géré.
@@ -60,7 +62,8 @@ Le test `tests/roots_lr4_isolator_test.c` est référencé dans
 3. reconstruction DC à gain unitaire ;
 4. réponse de la somme des bandes à ±0,5 % sur des fréquences de 20 Hz à 20 kHz ;
 5. les 15 masques non vides sur la même grille de fréquences ;
-6. bornage sous excitation pleine échelle.
+6. bornage sous excitation pleine échelle ;
+7. rampes ON/OFF, bypass exact après extinction et réinitialisation des états à la réactivation.
 
 Le script complet exige d'abord le build SDK (`./build.sh`). Dans cet
 environnement de travail, le checkout local et le SDK JieLi ne sont pas
@@ -73,7 +76,7 @@ arrondis du code C fixe, ses transitoires, ni le matériel.
 - Exécuter les tests C dans un checkout complet et corriger tout écart mesuré.
 - Mesurer les courbes des quatre sorties séparées, pas seulement leur somme.
 - Mesurer crêtes et transitoires pour les 15 masques et tous les gains autorisés.
-- Ajouter une rampe de gain sans clic et définir une marge de headroom.
+- Ajouter une rampe de gain sans clic et définir une marge de headroom (la rampe d'activation/bypass est maintenant présente, pas celle des gains de bande).
 - Mesurer CPU et RAM sur la cible FM-1.
 - Vérifier le signal stéréo, USB FULL, visualiseur et bypass après insertion au
   point d'injection identifié dans l'audit technique.
