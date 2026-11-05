@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "roots_isolator.h"
-#define CHECK(c, m) do { if (!(c)) { fprintf(stderr, "FAIL: %s\\n", m); return 1; } } while (0)
+#define CHECK(c, m) do { if (!(c)) { fprintf(stderr, "FAIL: %s\n", m); return 1; } } while (0)
 int main(void)
 {
     roots_iso_t iso;
