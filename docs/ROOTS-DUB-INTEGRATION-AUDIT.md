@@ -1,0 +1,112 @@
+# FM1 ROOTS DUB — audit d’intégration DSP
+
+Branche : `roots-dub-dev`  
+Base examinée : SLOOP 2.8.5  
+Nature : audit statique des sources, sans compilation ni test matériel.
+
+## Décision technique
+
+Ne pas ajouter encore de paramètres persistants ni brancher le prototype web sur le moteur. Le chemin audio est déjà très intégré : les paramètres sont exposés par le protocole SysEx, les projets et presets ont des formats binaires historiques, et le moteur tourne dans un budget temps réel serré. Une modification naïve peut casser la compatibilité des projets, user presets, contrôleurs web et builds FM-1.
+
+La prochaine intégration doit être incrémentale : d’abord un module DSP autonome et testable, ensuite son insertion dans le bus master, puis seulement les contrôles et la sauvegarde.
+
+## Ce que les sources confirment
+
+### 1. Le chemin audio existe déjà
+
+Dans `firmware/src/fx.c` :
+
+- chaque partie synthé est rendue par `mix_part_run()`;
+- DIST et INSERT sont appliqués sur chaque piste;
+- le filtre de piste `P_TFLT` intervient après le slicer et avant le niveau/pan;
+- chaque piste alimente les bus chorus, delay et reverb;
+- les bus sont calculés dans `fx_buses()`;
+- le mix stéréo passe ensuite par le ducking, DUST, le filtre DJ global `G_FILT`, le traitement master, le limiteur et le knee de sortie.
+
+Conséquence : un isolateur général 4 bandes doit être placé dans le chemin master, après la sommation des pistes et avant le traitement final/limiteur. Le mettre dans chaque piste changerait le comportement des sends et multiplierait inutilement le coût CPU.
+
+### 2. Le DSP actuel est majoritairement entier/fixed-point
+
+Le code de mix utilise des accumulateurs `int32_t`, coefficients Q12/Q15 et des états persistants. Le nouveau traitement doit suivre cette convention, borner les accumulations et éviter les flottants dans l’interruption audio. Le prototype HTML utilise Web Audio et des filtres natifs : il sert de maquette sonore/ergonomique, pas de code à copier directement dans le firmware.
+
+### 3. Les paramètres sont une interface publique persistante
+
+- `P_COUNT` et `G_COUNT` déterminent les tableaux et les commandes `INFO/DESC/GET/SET/DUMP` de `editor.c`.
+- Les paramètres de piste sont enregistrés dans les projets et user presets.
+- `upreset.c` a une capacité fixe de 72 paramètres et un enregistrement de 192 octets; le nombre courant doit rester dans cette limite.
+- Les paramètres globaux ne sont pas tous stockés de façon uniforme : certains réglages sont des préférences de l’appareil, d’autres sont conservés via des octets de réserve ou des champs détournés.
+
+**Règle : aucun identifiant existant ne doit être renuméroté.** Les ajouts de paramètres doivent être append-only et accompagnés d’une mise à jour explicite des formats de stockage et de leurs tests.
+
+### 4. Les projets ont un format compact versionné
+
+`project.c` utilise actuellement le format 6 (`FUN6`). Il conserve 32 globals historiques dans `g[]`, puis des champs dédiés (dont le délai drums et la texture), et sépare les paramètres de piste en trois groupes : paramètres 16 bits historiques, paramètres ajoutés en octets, et paramètres moteur.
+
+Des assertions statiques imposent notamment :
+
+- `G_DRDLY == PROJ_NG`;
+- `G_TXSRC == PROJ_NG + 5`;
+- `G_FXFADE` est le dernier global;
+- le bloc de paramètres compacts de piste a exactement 10 octets.
+
+Cela interdit de supposer qu’un simple `G_COUNT++` ou `P_COUNT++` sera sauvegardé correctement. Une évolution persistante exige un nouveau format de projet (et les conversions de lecture des formats anciens) ou une utilisation documentée d’un champ de réserve réellement disponible, avec preuve par tests de compatibilité.
+
+### 5. Le preview navigateur peut utiliser le vrai moteur
+
+`firmware/host/preview.c` inclut directement les mêmes sources C principales, dont `fx.c`, `params.c`, `voice.c` et `seq.c`. `tools/build_preview.py` construit le WASM à partir de ce moteur. C’est la bonne voie pour remplacer progressivement le prototype Web Audio par un aperçu cohérent avec le firmware. Il faut reconstruire le WASM depuis les sources; le fichier WASM déjà commité ne prouve pas qu’il correspond aux nouveaux changements.
+
+## Architecture proposée pour l’Isolator ROOTS DUB
+
+### Emplacement
+
+Un seul traitement stéréo sur le bus master, inséré après les effets master existants qui doivent être entendus dans les bandes et avant le limiteur final. Le point exact d’insertion doit être confirmé en traçant le bloc complet de rendu dans `fx.c` avant le premier commit DSP.
+
+### Banque de filtres
+
+- Quatre bandes complémentaires : SUB, BASS, MIDS, TOPS.
+- Trois fréquences de coupure communes, configurables plus tard.
+- Même réseau de coupure pour gauche et droite.
+- Gains indépendants par bande, avec valeurs neutres au démarrage.
+- États persistants par canal et par section de filtre.
+- Coefficients calculés hors boucle d’échantillons ou pré-calculés au changement de fréquence.
+- Saturation/bornage des gains et des états pour éviter les débordements.
+- Bypass strict : lorsque l’isolateur est désactivé, la sortie doit être bit-identique au signal d’entrée et les états ne doivent pas créer de clic à la réactivation.
+
+Le prototype utilise des cascades de sections Butterworth en Web Audio. Avant d’adopter exactement cette topologie en fixed-point, mesurer la somme des bandes autour des coupures, la réponse en phase, le gain de crête, le coût CPU et les cas extrêmes. La somme complémentaire ne doit pas être présumée parfaite simplement parce que les bandes ont des fréquences de coupure identiques.
+
+### Paramètres et commandes
+
+Ne pas exposer de nouveaux paramètres persistants avant d’avoir arrêté le format de stockage. Première étape : module avec configuration de test interne, bypass par défaut, et tests unitaires. Ensuite choisir entre :
+1. extension versionnée des projets et des presets;
+2. paramètres temporaires non sauvegardés pour valider l’ergonomie;
+3. réutilisation de champs de réserve uniquement après preuve qu’ils sont libres sur tous les formats concernés.
+
+## Dub Siren et One-Key Skank
+
+- **Dub Siren** : réutiliser les oscillateurs, enveloppes, LFO et delay déjà présents; éviter d’ajouter un second moteur audio parallèle. Le prototype reste une référence d’interface jusqu’à l’identification d’un moteur existant qui peut accueillir la sirène sans casser les presets.
+- **One-Key Skank** : s’appuyer sur le moteur d’accords/voicings et la logique de séquence existants. Le mode doit être un comportement de jeu clairement défini, pas un accord figé qui contourne la gamme, la transposition ou le séquenceur.
+- **Tempo** : le LFO 2 synchronisé existe déjà; le réutiliser au lieu d’introduire une horloge indépendante.
+
+## Plan de validation obligatoire
+
+Avant de considérer une intégration comme prête :
+
+1. Compiler le firmware avec la toolchain officielle.
+2. Exécuter `tests/run_tests.sh` et examiner les tests golden audio : tout changement sonore attendu doit être justifié et les golden mis à jour volontairement.
+3. Construire le preview WASM avec `python3 tools/build_preview.py`.
+4. Exécuter `tests/run_preview_tests.sh`.
+5. Ajouter des tests dédiés à l’isolateur : réponse par bande, somme à plat, phase/transition, silence, signal extrême, bypass bit-identique, changement de fréquence sans clic.
+6. Vérifier la taille mémoire, le budget CPU et la latence.
+7. Tester sur FM-1 réel : audio, commandes, sauvegarde/chargement de projets et user presets.
+
+## État de validation
+
+- Audit des sources GitHub : effectué.
+- Prototype Web Audio : présent dans la branche, avec limites documentées.
+- Compilation firmware : non effectuée.
+- Tests C hôte : non exécutés.
+- Build WASM depuis cette branche : non effectué.
+- Écoute navigateur / appareil : non effectuée.
+- Flash et test FM-1 : non effectués.
+
+Aucune affirmation de fonctionnement matériel n’est faite.
