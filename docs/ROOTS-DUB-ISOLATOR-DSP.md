@@ -30,11 +30,11 @@ reste  -> LR4 @ 2,5 kHz -> MIDS (LP) + TOPS (HP)
 Un couple LR4 LP+HP est un all-pass, pas un fil de phase nulle. Dans la cascade,
 les bandes basses subissent donc moins de déphasage que les bandes hautes.
 Avant sommation, SUB traverse les all-pass à 350 Hz et 2,5 kHz ; BASS traverse
-celui à 2,5 kHz. Chaque all-pass LR4 est constitué de deux biquads all-pass du
-second ordre avec numérateur renversé.
+celui à 2,5 kHz. La somme complexe d'un couple LP4 + HP4 correspond à un seul biquad all-pass
+du second ordre, avec numérateur renversé ; il ne faut pas le doubler.
 
 Le module contient 12 biquads de séparation et 6 de compensation par canal,
-soit 18 par canal et 36 en stéréo. L'ordre de grandeur est d'environ 180
+soit 15 par canal et 30 en stéréo. L'ordre de grandeur est d'environ 150
 multiplications par échantillon stéréo. Ce coût doit être mesuré sur le FM-1
 avant toute intégration.
 
@@ -46,7 +46,7 @@ avant toute intégration.
   une rampe dry/wet de 64 échantillons revient au bypass puis fige les états ; à la
   réactivation, les historiques sont remis à zéro et une rampe de 64 échantillons
   évite une commutation instantanée.
-- Saturation interne/sortie à +/-131071.
+- États internes Q8 (8 bits fractionnaires) pour limiter l'erreur de quantification des filtres graves ; saturation interne à +/-131071 en unité audio, sortie à +/-131071.
 - Coefficients fixes à 44,1 kHz ; aucun changement de fréquence
   d'échantillonnage n'est géré.
 - Les rampes de gain, les contrôles utilisateur, la persistance FUN7 et le
