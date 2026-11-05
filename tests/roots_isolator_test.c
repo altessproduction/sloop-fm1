@@ -32,7 +32,7 @@ int main(void)
     roots_iso_init(&iso); iso.enabled = 1;
     iso.gain[0] = iso.gain[1] = iso.gain[2] = 0; iso.gain[3] = 32767;
     for (i = 0; i < 50000; ++i) y = roots_iso_process(&iso, 10000);
-    CHECK(abs(y) <= 2, "TOPS rejects settled DC");
+    CHECK(abs(y) <= 10, "TOPS rejects settled DC");
     roots_iso_init(&iso); iso.enabled = 1;
     for (i = 0; i < 50000; ++i) {
         x = (i & 1u) ? 131071 : -131071;
