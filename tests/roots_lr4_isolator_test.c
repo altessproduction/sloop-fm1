@@ -36,12 +36,12 @@ int main(void)
         const double f[]={20,30,60,120,240,350,700,1000,2500,5000,10000,20000};
         for(i=0;i<sizeof(f)/sizeof(f[0]);i++) {
             double a=measure(f[i],15);
-            CHECK(a>0.84 && a<1.02,"unity sum frequency response within measured cascade envelope");
+            CHECK(a>0.995 && a<1.005,"phase-aligned unity sum response within +/-0.5%");
         }
     }
     for(i=1;i<16;i++) {
         double a=measure(997.0,(int)i);
-        CHECK(a>=0.0 && a<1.8,"all 15 band masks remain bounded");
+        CHECK(a>=0.0 && a<1.02,"all 15 band masks remain bounded");
     }
     roots_lr4_init(&s); s.enabled=1;
     for(i=0;i<100000;i++){x=(i&1)?131071:-131071;y=roots_lr4_process(&s,x);
