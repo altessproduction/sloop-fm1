@@ -34,7 +34,7 @@ enum { ED_INFO = 1, ED_GET, ED_SET, ED_DUMP, ED_DESC, ED_STEP_GET, ED_STEP_SET, 
 /* v10 (SLOOP 2.5): DSYN_LIST .. DSYN_PLAY = 72..76, editor_dsyn.c; backup object 9 = the SYN kits */
 /* v11 (SLOOP 2.7): backup object 11 = your theme (gfx.c theme_t), the editor's Theme page */
 /* v12 (SLOOP 2.7): LIVE = 77, editor_live.c: the LIVE page (transport, sections, mix keys, punch-in FX, REC, undo) */
-#define ED_PROTO 12u                                   /* the protocol version INFO ends with */
+#define ED_PROTO 13u                                   /* the protocol version INFO ends with */
 
 static uint8_t ed_out[600];
 static uint32_t ed_n;
@@ -1174,6 +1174,31 @@ UI_SMALL static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes b
         ed_b(a[0]);
         ed_b(a[1]);
         ed_b(step_fill(t, a[1]));
+        break;
+    }
+    case 78: {                                            /* ROOTS_GET: enabled, SUB, BASS, MIDS, TOPS */
+        uint8_t enabled, gain[4];
+        if (na != 0u)
+            return;
+        proj_roots_get(&enabled, gain);
+        ed_b(enabled);
+        for (i = 0; i < 4u; i++)
+            ed_b(gain[i]);
+        break;
+    }
+    case 79: {                                            /* ROOTS_SET: enabled, SUB, BASS, MIDS, TOPS */
+        uint8_t gain[4];
+        if (na != 5u)
+            return;
+        for (i = 0; i < 4u; i++)
+            gain[i] = a[i + 1u] > 127u ? 127u : a[i + 1u];
+        fm1_irq_off();
+        proj_roots_set(a[0], gain);
+        fm1_irq_on();
+        { uint8_t enabled; proj_roots_get(&enabled, gain); ed_b(enabled); }
+
+        for (i = 0; i < 4u; i++)
+            ed_b(gain[i]);
         break;
     }
     default:
