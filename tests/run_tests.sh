@@ -37,7 +37,9 @@ mkdir -p build/gen
 [ build/gen/felucca_fm6.h -nt tools/gen_fm6_patches.py ] || python3 tools/gen_fm6_patches.py build/gen/felucca_fm6.h
 
 $CC -Ifirmware/src -o "$OUT/roots_isolator_test" tests/roots_isolator_test.c
-run "ROOTS DUB: four-band isolator bypass, unity, mute, DC rejection and bounded stress" "$OUT/roots_isolator_test"
+run "ROOTS DUB: legacy prototype checks" "$OUT/roots_isolator_test"
+$CC -Ifirmware/src -o "$OUT/roots_lr4_isolator_test" tests/roots_lr4_isolator_test.c -lm
+run "ROOTS DUB: LR4 fixed-point crossover checks" "$OUT/roots_lr4_isolator_test"
 
 $CC -o "$OUT/storage_test" tests/storage_test.c
 run "flash storage (A/B, torn writes)" "$OUT/storage_test"
