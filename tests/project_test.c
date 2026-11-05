@@ -155,14 +155,14 @@ int main(void)
     v3.sum = proj_hash(&v3, sizeof v3 - 4u);
     memcpy(&buf, &v3, sizeof v3);
     ok = proj_import(&q, &buf, (int)sizeof v3);
-    bad += check("FUN3 -> FUN6: converted, valid format 6 slot", ok && proj_ok(&q) && q.magic == PROJ_MAGIC);
+    bad += check("FUN3 -> FUN7: converted, valid FUN7 slot", ok && proj_ok(&q) && q.magic == PROJ_MAGIC);
     ok = q.sel == 3 && q.g[G_SWING] == 40;
     for (i = 0; i < PROJ_NG_V3; i++)
         ok &= i == G_SWING || q.g[i] == (int16_t)(300 + i);
     for (i = PROJ_NG_V3; i < PROJ_NG; i++)
         ok &= q.g[i] == GP[i].def;
     ok &= q.drdly == 0;
-    bad += check("FUN3 -> FUN6: globals (swing 50 -> 40: the MPC scale), the new ones default", ok);
+    bad += check("FUN3 -> FUN7: globals (swing 50 -> 40: the MPC scale), the new ones default", ok);
     ok = 1;
     for (t = 0; t < NTRK; t++) {
         const proj_trk_t *n = &q.t[t];
@@ -181,7 +181,7 @@ int main(void)
         for (k = P_ITYPE; k < P_E0; k++)
             ok &= pt_get(n, k) == TP[k].def;
     }
-    bad += check("FUN3 -> FUN6: parameters (P_E0.. moved), steps, drum notes -> lanes, no lock, no fill", ok);
+    bad += check("FUN3 -> FUN7: parameters (P_E0.. moved), steps, drum notes -> lanes, no lock, no fill", ok);
 
     /* format 2, as written before the SLICER */
     memset(&v2, 0, sizeof v2);
@@ -196,16 +196,16 @@ int main(void)
     bad += check("FUN2 image is 2552 bytes (as stored)", sizeof v2 == 2552u);
     memcpy(&buf, &v2, sizeof v2);
     ok = proj_import(&q, &buf, (int)sizeof v2);
-    bad += check("FUN2 -> FUN6: converted, valid format 6 slot", ok && proj_ok(&q) && q.magic == PROJ_MAGIC);
+    bad += check("FUN2 -> FUN7: converted, valid FUN7 slot", ok && proj_ok(&q) && q.magic == PROJ_MAGIC);
     ok = q.sel == 2;
     for (i = 0; i < PROJ_NG_V2; i++)
         ok &= i == G_SWING || q.g[i] == (int16_t)(500 + i);
-    bad += check("FUN2 -> FUN6: globals and selected track", ok);
+    bad += check("FUN2 -> FUN7: globals and selected track", ok);
     ok = 1;
     for (t = 0; t < NTRK; t++)
         ok &= track_ok_v2(&q.t[t], &v2.t[t], t);
-    bad += check("FUN2 -> FUN6: every parameter mapped, SLICER OFF, CHORD OFF (4 tracks)", ok);
-    bad += check("FUN2 -> FUN6: engine bytes kept (WHEEL 7, ANALOG 0, TRIO 6), drum 0",
+    bad += check("FUN2 -> FUN7: every parameter mapped, SLICER OFF, CHORD OFF (4 tracks)", ok);
+    bad += check("FUN2 -> FUN7: engine bytes kept (WHEEL 7, ANALOG 0, TRIO 6), drum 0",
                  q.t[0].engine == 7 && q.t[1].engine == 0 && q.t[2].engine == 6 && q.t[3].engine == 0 &&
                  str_eq(ENGINES[7]->name, "WHEEL") && str_eq(ENGINES[6]->name, "TRIO") && NENGINES > 8);
 
@@ -243,13 +243,13 @@ int main(void)
         for (i = P_ITYPE; i < P_E0; i++)
             ok &= pt_get(&q2.t[t], i) == TP[i].def;
     }
-    bad += check("FUN4 -> FUN6: as stored (levels, ratchets, lanes, engine 8; P_E0.. moved, FILTER off), zero nudges, locks free, no fill condition", ok);
+    bad += check("FUN4 -> FUN7: as stored (levels, ratchets, lanes, engine 8; P_E0.. moved, FILTER off), zero nudges, locks free, no fill condition", ok);
     v4.t[2].step[1].vel ^= 1u;
     memcpy(&buf, &v4, sizeof v4);
     bad += check("FUN4 with a bad checksum: refused", !proj_import(&q2, &buf, (int)sizeof v4));
     v4.t[2].step[1].vel ^= 1u;
 
-    /* a FUN5 image (SLOOP 2.4 .. 2.5, as stored) -> FUN6: by id, the 2.6 ten at their defaults, the nudges and
+    /* a FUN5 image (SLOOP 2.4 .. 2.5, as stored) -> FUN7: by id, the 2.6 ten at their defaults, the nudges and
      * conditions into a byte a step, a lock on P_E0.. moved with it (format 5's 53.. -> 63..) */
     memset(&v5, 0, sizeof v5);
     v5.magic = PROJ_MAGIC_V5;
@@ -289,7 +289,7 @@ int main(void)
           pt_fill(&q2.t[0], 2) == FC_NORM && pt_fill(&q2.t[TRK_DRUM], 63) == FC_FILL &&
           q2.t[1].lock[0].param == P_E1 && q2.t[1].lock[0].val == 9 && q2.t[1].lock[1].param == P_DIST &&
           q2.t[1].lock[2].step == LOCK_FREE;
-    bad += check("FUN5 -> FUN6: by id, the 2.6 parameters default, nudges and conditions kept, a lock on E2 moved with it", ok);
+    bad += check("FUN5 -> FUN7: by id, the 2.6 parameters default, nudges and conditions kept, a lock on E2 moved with it", ok);
     v5.t[3].micro[0] ^= 1;
     memcpy(&buf, &v5, sizeof v5);
     bad += check("FUN5 with a bad checksum: refused", !proj_import(&q2, &buf, (int)sizeof v5));
@@ -376,7 +376,7 @@ int main(void)
         ok &= q.t[t].preset == 0xFF && q.t[t].p[P_SLCR] == 0 && q.t[t].p[P_LEVEL] == TP[P_LEVEL].def &&
               pt_get(&q.t[t], P_E0) == ENGINES[trk_def_engine(t)]->edit[0].def && q.t[t].lock[0].step == LOCK_FREE &&
               (t == TRK_DRUM ? dstep_mask(&q.t[t].dstep[0]) == 0u : q.t[t].step[0].time == ST_REST);
-    bad += check("FUN1 -> FUN6: track 1 mapped, tracks 2..4 defaults", ok);
+    bad += check("FUN1 -> FUN7: track 1 mapped, tracks 2..4 defaults", ok);
 
     /* capture / apply: the working project round trip (nudges and locks too) */
     host_tracks_init();
@@ -484,7 +484,7 @@ int main(void)
         memset(drum_tune, 0, sizeof drum_tune), memset(drum_dec, 0, sizeof drum_dec);
         bad += check("2.7 drum SOUND page: TUNE and DECAY of the 16 sounds kept in a project and a section; an older one: none", ok);
     }
-    {   /* what format 6 packs in fewer bits holds every value: the byte parameters (P_ITYPE .. P_LPOL: 0..255), TEXTURE's
+    {   /* what FUN6's compact parameter encoding holds in fewer bits: the byte parameters (P_ITYPE .. P_LPOL: 0..255), TEXTURE's
          * SRC (4 bits), WHEN and DUCK (1), RATE (a byte), LEVEL and TONE + 64 (7 bits each) */
         uint32_t k;
         int ok = 1;
