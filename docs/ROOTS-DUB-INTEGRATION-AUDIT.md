@@ -146,3 +146,16 @@ Le module `roots_isolator.h` reste autonome pour le moment. L'insertion DSP et l
 La simulation du module `roots_isolator.h` (44,1 kHz, sinusoïdes établies) révèle un recouvrement trop important pour un isolateur de performance : à 350 Hz, MIDS atteint environ 1,163 fois l'amplitude d'entrée lorsqu'elle est seule ; à 1 kHz, TOPS reçoit encore environ 0,643. L'unité des quatre gains recompose le signal, mais cela ne garantit pas une séparation correcte lors de l'atténuation de bandes. Le module reste donc expérimental et ne doit pas être raccordé au master bus en l'état. Il faut d'abord remplacer la topologie par un crossover à pentes contrôlées, puis tester phase, sommation, crêtes et les combinaisons de bandes. Simulation documentée dans `ROOTS-DUB-ISOLATOR-DSP.md`.
 
 Le format FUN7 est maintenant spécifié plus précisément : 12 octets de configuration Roots Dub ajoutés au FUN6, taille attendue 3 828 octets ; FUN5 impose que l'union de staging reste à 3 840 octets. L'implémentation binaire reste à faire avec une structure FUN6 historique distincte et des tests hôte de migration.
+
+
+## Mise à jour — 2026-11-05, prototypes LR4 et FUN7
+
+Les prototypes ont progressé depuis cet audit initial :
+
+- Le module autonome `roots_lr4_isolator.h` remplace désormais la topologie à un pôle pour les essais de séparation : trois crossovers LR4 fixes Q30 et compensation all-pass des bandes SUB/BASS.
+- Le laboratoire Web Audio `roots-dub-lab.html` applique lui aussi cette compensation : SUB traverse les all-pass à 350 Hz et 2,5 kHz ; BASS traverse celui à 2,5 kHz.
+- `tests/roots_lr4_isolator_test.c` vise la reconstruction unitaire à ±0,5 % et balaie les 15 masques non vides sur une grille de fréquences. Un défaut de portée de la grille a été corrigé.
+- `web/test_web.mjs` contient maintenant des contrôles statiques de la topologie all-pass et de la syntaxe JavaScript du laboratoire.
+- Le format FUN7 est implémenté sur la branche avec migration FUN1..FUN6 et gains Roots neutres pour les anciens projets.
+
+Ces ajouts ne changent pas la décision d'intégration : aucun de ces tests n'a encore été exécuté dans un checkout complet, aucun build firmware/WASM n'a été produit et aucun essai sur FM-1 n'a eu lieu. Le LR4 reste isolé du bus master. Les contrôles web ajoutés doivent être exécutés avec `node web/test_web.mjs` dans un environnement disposant des dépendances/outils du dépôt.
