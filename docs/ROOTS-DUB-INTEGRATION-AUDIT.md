@@ -164,6 +164,9 @@ Ces ajouts ne changent pas la décision d'intégration : aucun de ces tests n'a 
 ### 2026-11-05 — transitions et séparation LR4
 
 Le prototype LR4 a été renforcé avant toute intégration :
+- correction de la compensation : un biquad all-pass du second ordre par crossover ultérieur, pas deux en cascade ;
+- états de biquad conservés en Q8 pour éviter la forte erreur de quantification constatée avec des états entiers ;
+- plage interne étendue à +/-1048575 en unité audio pour préserver la marge du bus ;
 - activation/désactivation avec fondu dry/wet de 64 échantillons ;
 - retour au bypass bit-identique après extinction complète ;
 - remise à zéro des historiques de biquads à la réactivation, pour ne pas réutiliser des états périmés ;
