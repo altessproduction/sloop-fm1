@@ -9,9 +9,10 @@
 
 #define ROOTS_LR4_Q30 INT64_C(1073741824)
 #define ROOTS_LR4_MAX 131071
+#define ROOTS_LR4_MAX_Q8 (ROOTS_LR4_MAX * 256)
 
 typedef struct {
-    int32_t x1, x2, y1, y2;
+    int32_t x1, x2, y1, y2; /* Q8 audio states */
 } roots_lr4_biquad_state_t;
 
 typedef struct {
@@ -39,18 +40,18 @@ static const roots_lr4_coeff_t roots_lr4_hp_coeff[3] = {
 
 static inline int32_t roots_lr4_sat(int64_t x)
 {
-    return x > ROOTS_LR4_MAX ? ROOTS_LR4_MAX :
-           x < -ROOTS_LR4_MAX ? -ROOTS_LR4_MAX : (int32_t)x;
+    return x > ROOTS_LR4_MAX_Q8 ? ROOTS_LR4_MAX_Q8 :
+           x < -ROOTS_LR4_MAX_Q8 ? -ROOTS_LR4_MAX_Q8 : (int32_t)x;
 }
 
-/* Direct form I: 64-bit accumulator, Q30 coefficients, integer audio states. */
+/* Direct form I: Q30 coefficients, Q8 states, 64-bit accumulator. */
 static inline int32_t roots_lr4_biquad(int32_t x,
         roots_lr4_biquad_state_t *s, const roots_lr4_coeff_t *c)
 {
     int64_t acc = (int64_t)c->b0*x + (int64_t)c->b1*s->x1 +
                   (int64_t)c->b2*s->x2 - (int64_t)c->a1*s->y1 -
                   (int64_t)c->a2*s->y2;
-    int32_t y = roots_lr4_sat(acc >> 30);
+    int32_t y = roots_lr4_sat(acc >> 30); /* remain in Q8 between sections */
     s->x2=s->x1; s->x1=x; s->y2=s->y1; s->y1=y;
     return y;
 }
@@ -78,7 +79,8 @@ static inline void roots_lr4_init(roots_lr4_t *s)
  * crossfades over 64 samples; re-enable starts with clean filter histories. */
 static inline int32_t roots_lr4_process(roots_lr4_t *s, int32_t input)
 {
-    int32_t rest=input, bands[4], filtered, out;
+    int32_t input_q8=roots_lr4_sat((int64_t)input * 256);
+    int32_t rest=input_q8, bands[4], filtered, out;
     int64_t mix=0;
     unsigned i,j;
     if (!s->enabled && s->wet == 0u) { s->running=0u; return input; }
@@ -88,7 +90,7 @@ static inline int32_t roots_lr4_process(roots_lr4_t *s, int32_t input)
         memset(s->allpass,0,sizeof(s->allpass));
         s->running=1u;
     }
-    rest=roots_lr4_sat(rest);
+    rest=input_q8;
     for (i=0;i<3;i++) {
         int32_t lo=rest, hi=rest;
         for (j=0;j<2;j++) {
@@ -107,7 +109,7 @@ static inline int32_t roots_lr4_process(roots_lr4_t *s, int32_t input)
     if (s->enabled) s->wet = s->wet > 32255u ? 32768u : (uint16_t)(s->wet + 512u);
     else s->wet = s->wet < 512u ? 0u : (uint16_t)(s->wet - 512u);
     if (s->wet == 0u) { s->running=0u; return input; }
-    out=roots_lr4_sat(((int64_t)input*(32768u-s->wet) + (int64_t)filtered*s->wet) >> 15);
-    return out;
+    out=roots_lr4_sat(((int64_t)input_q8*(32768u-s->wet) + (int64_t)filtered*s->wet) >> 15);
+    return out >> 8;
 }
 #endif
