@@ -85,8 +85,8 @@ static inline int32_t roots_lr4_process(roots_lr4_t *s, int32_t input)
     for (i=0;i<3;i++) {
         int32_t lo=rest, hi=rest;
         for (j=0;j<2;j++) {
-            lo=roots_lr4_biquad(lo,&s->lp[i].lp[j],&roots_lr4_lp_coeff[i]);
-            hi=roots_lr4_biquad(hi,&s->hp[i].hp[j],&roots_lr4_hp_coeff[i]);
+            lo=roots_lr4_biquad(lo,&s->lp[i][j],&roots_lr4_lp_coeff[i]);
+            hi=roots_lr4_biquad(hi,&s->hp[i][j],&roots_lr4_hp_coeff[i]);
         }
         bands[i]=lo;
         rest=hi;
