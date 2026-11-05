@@ -1,6 +1,6 @@
 # ROOTS DUB — contrat SysEx et éditeur
 
-État au 2026-11-05 : commandes firmware 78/79 et conversion Q15/7 bits implémentées sur la branche ; interface web non implémentée ; aucun test compilé/exécuté ici.
+État au 2026-11-05 : commandes firmware 78/79 et conversion Q15/7 bits implémentées sur la branche ; curseurs ROOTS DUB ajoutés à l'éditeur web ; aucun test compilé/exécuté ici.
 Branche : `roots-dub-dev`. Ne pas considérer ces commandes comme disponibles sur un FM-1.
 
 ## Constat d'architecture
@@ -35,22 +35,23 @@ L'implémentation actuelle des commandes :
 
 La première version n'a pas besoin d'une nouvelle trame push : les commandes GET/SET suffisent tant qu'aucune commande physique ne modifie les gains en parallèle. Si des contrôles matériels ROOTS sont ajoutés, prévoir un push dédié et l'intégrer au mécanisme WATCH plutôt que détourner `CHANGED`, qui ne transporte que des paramètres `P_*` / `G_*`.
 
-Dans `web/editor.html`, ajouter une page ROOTS DUB distincte des paramètres globaux :
-- interrupteur BYPASS / ON ;
+Dans `web/editor.html`, le panneau ROOTS DUB est ajouté à la page SOUND, séparé des paramètres globaux :
+- interrupteur d'activation ;
 - quatre curseurs SUB, BASS, MIDS, TOPS, avec repère 0 dB à 127 ;
 - lecture initiale via GET après détection de v13 ;
-- envoi SET avec coalescence (éviter une trame à chaque événement de pointeur) ;
-- désactivation et message explicite si le firmware ne connaît pas les commandes 78/79.
+- envoi SET sur validation du curseur (événement `change`) avec sérialisation des écritures ;
+- panneau masqué sur les firmwares antérieurs à v13 ;
+- mode mock activable avec `?roots=1`, sans changer le protocole mock historique par défaut.
 
 Le prototype Web Audio `web/roots-dub-lab.html` reste un laboratoire autonome ; il ne doit pas être présenté comme le contrôle du DSP embarqué.
 
 ## Conditions avant intégration
 
-1. Ajouter les contrôles à l'éditeur, avec détection de version et tests statiques.
+1. Tester les contrôles web sur navigateur et sur un FM-1 v13, notamment les écritures rapides successives.
 2. Ajouter un test d'intégration SysEx GET/SET et vérifier les bornes, le bypass, la persistance après capture/apply et la coexistence avec WATCH.
 3. Compiler et exécuter les tests FUN7 et LR4 dans un checkout complet.
 4. Ne raccorder le module LR4 au bus master qu'après validation numérique fixe-point, budget CPU sur FM-1 et tests sur matériel.
 
 ## Limites actuelles
 
-Les commandes SysEx 78/79 sont implémentées pour lire/écrire les réglages, mais l'éditeur web n'a pas encore ses curseurs. Aucun test n'a été compilé/exécuté dans un checkout complet ni sur la cible matérielle. Le module LR4 n'est pas raccordé au mixage.
+Les commandes SysEx 78/79 et les contrôles web sont présents sur la branche. Le mode mock v13 et un test automatisé GET/SET ont été ajoutés, mais les tests ne sont pas encore exécutés dans un checkout complet. Le module LR4 n'est pas raccordé au mixage ; les curseurs stockent uniquement les réglages du projet FUN7.
