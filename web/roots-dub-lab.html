@@ -29,7 +29,7 @@ footer{margin-top:18px;color:var(--muted);font-size:12px}
 <div class="actions"><button id="siren" disabled>Déclencher la sirène</button><button id="release" class="secondary" disabled>Relâcher</button></div>
 <div class="note">Le bouton déclenche une enveloppe courte. Le son est généré localement par Web Audio ; aucun fichier audio externe.</div>
 </section>
-<section class="panel"><div class="eyebrow">02 · Master</div><h2>Isolateur 4 bandes</h2><p>Quatre sorties parallèles issues de croisements Linkwitz–Riley 4e ordre (deux biquads Butterworth en cascade par pente).</p>
+<section class="panel"><div class="eyebrow">02 · Master</div><h2>Isolateur 4 bandes</h2><p>Quatre sorties parallèles issues de croisements Linkwitz–Riley 4e ordre, avec compensation all-pass pour réaligner les bandes avant sommation.</p>
 <div class="control"><div class="control-head"><label for="inputTone">Signal de test</label><span class="value" id="inputToneV">110 Hz</span></div><input id="inputTone" type="range" min="35" max="8000" value="110"></div>
 <div class="control"><div class="control-head"><label for="toneLevel">Niveau du signal</label><span class="value" id="toneLevelV">−18 dB</span></div><input id="toneLevel" type="range" min="-36" max="-6" value="-18"></div>
 <div class="actions"><button id="testTone" disabled>Jouer le signal de test</button><button id="muteTone" class="secondary" disabled>Couper le signal</button></div>
@@ -39,9 +39,9 @@ footer{margin-top:18px;color:var(--muted);font-size:12px}
 <div class="band"><strong>MIDS</strong><small>350–2500 Hz</small><div class="control"><div class="control-head"><label for="mids">Gain</label><span class="value" id="midsV">0 dB</span></div><input id="mids" type="range" min="-24" max="6" value="0"></div></div>
 <div class="band"><strong>TOPS</strong><small>2.5–20 kHz</small><div class="control"><div class="control-head"><label for="tops">Gain</label><span class="value" id="topsV">0 dB</span></div><input id="tops" type="range" min="-24" max="6" value="0"></div></div>
 </div>
-<div class="note">Les fréquences de coupure sont provisoires. Le prototype utilise des filtres passe-bas/passe-haut en cascade ; la somme, la phase et le niveau doivent encore être mesurés avant de transposer ce DSP en virgule fixe sur le FM-1.</div>
+<div class="note">Les fréquences de coupure sont provisoires. SUB et BASS traversent des all-pass complémentaires pour compenser le déphasage des crossovers suivants. Cette maquette Web Audio reste distincte du DSP C fixe ; la réponse et les transitoires doivent être mesurés avant intégration FM-1.</div>
 </section>
-<section class="panel wide"><div class="eyebrow">03 · Notes techniques</div><h2>Ce que ce prototype valide — et ce qu’il ne valide pas</h2><p>Il permet d’écouter les principes de la sirène, du feedback et des gains par bande dans un navigateur moderne. Il ne réutilise pas encore le code C de SLOOP, ne parle pas au FM-1 en SysEx et ne garantit pas une réponse parfaitement plate à la sommation des bandes. Les filtres Web Audio servent ici de maquette fonctionnelle, pas de référence numérique pour le firmware.</p><footer>Prototype expérimental ROOTS DUB · sans dépendance externe · licence du dépôt parent à respecter lors de toute redistribution.</footer></section>
+<section class="panel wide"><div class="eyebrow">03 · Notes techniques</div><h2>Ce que ce prototype valide — et ce qu’il ne valide pas</h2><p>Il permet d’écouter les principes de la sirène, du feedback et des gains par bande dans un navigateur moderne. Il ne réutilise pas encore le code C de SLOOP et ne parle pas au FM-1 en SysEx. Les all-pass compensent la phase de la sommation à gains unitaires, mais les gains indépendants modifient naturellement la réponse ; cette maquette Web Audio n'est pas une référence numérique bit-exacte pour le firmware.</p><footer>Prototype expérimental ROOTS DUB · sans dépendance externe · licence du dépôt parent à respecter lors de toute redistribution.</footer></section>
 </div></main>
 <script>
 (() => {
@@ -61,9 +61,12 @@ const [subLP1,subLP2]=makeLR(ctx,'lowpass',120);
 const [bassHP1,bassHP2]=makeLR(ctx,'highpass',120),[bassLP1,bassLP2]=makeLR(ctx,'lowpass',350);
 const [midHP1,midHP2]=makeLR(ctx,'highpass',350),[midLP1,midLP2]=makeLR(ctx,'lowpass',2500);
 const [topHP1,topHP2]=makeLR(ctx,'highpass',2500);
+const [subAP350a,subAP350b]=makeLR(ctx,'allpass',350);
+const [subAP2500a,subAP2500b]=makeLR(ctx,'allpass',2500);
+const [bassAP2500a,bassAP2500b]=makeLR(ctx,'allpass',2500);
 const branches=[
-chain(input,[subLP1,subLP2]),
-chain(input,[bassHP1,bassHP2,bassLP1,bassLP2]),
+chain(input,[subLP1,subLP2,subAP350a,subAP350b,subAP2500a,subAP2500b]),
+chain(input,[bassHP1,bassHP2,bassLP1,bassLP2,bassAP2500a,bassAP2500b]),
 chain(input,[midHP1,midHP2,midLP1,midLP2]),
 chain(input,[topHP1,topHP2])
 ];
