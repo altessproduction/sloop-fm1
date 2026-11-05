@@ -124,3 +124,57 @@ staging doit simplement pouvoir contenir le plus grand format, et les tests
 doivent couvrir une restauration d'un ancien FUN6 ainsi qu'un aller-retour
 FUN7. Cette compatibilité doit aussi être vérifiée pour l'objet autosave et les
 quatre sections, pas seulement pour un import isolé.
+
+
+## Disposition binaire candidate, vérifiée contre les buffers actuels
+
+L'audit du buffer de staging précise le choix de la structure :
+
+- `proj_tmp` est une union des formats projet historiques ; il est aussi prêté
+  à `upreset.c` et `fm6_bank.c`.
+- Cette union doit continuer à accueillir `project_v5_t` (3 840 octets), même
+  si FUN7 devient le format courant.
+- `st_load()` reçoit `sizeof proj_tmp`, donc garder cette union à 3 840 octets
+  conserve la capacité de lecture des anciens objets et les usages partagés.
+
+### FUN7 proposé
+
+Conserver l'en-tête FUN6 et insérer un bloc Roots Dub de 12 octets après
+`sel, drdly, rsv[2]`, avant les pistes :
+
+| Champ | Taille | Sens |
+|---|---:|---|
+| `roots_gain[4]` | 8 octets | quatre `uint16_t` Q15, 32768 = unité |
+| `roots_enabled` | 1 octet | 0 désactivé, 1 activé |
+| `roots_rsv[3]` | 3 octets | réservés, écrits à zéro |
+| **Total ajouté** | **12 octets** | |
+
+La taille résultante attendue est **3 828 octets** (FUN6 3 816 + 12), sous
+la limite de 3 840. La structure doit être validée par une assertion exacte
+`sizeof(project_v6_t) == 3816`, `sizeof(project_t) == 3828` et
+`sizeof(project_t) <= ST_PAYLOAD_MAX` au moment de l'implémentation.
+
+### Migration à implémenter
+
+- Renommer la structure actuellement appelée `project_t` en
+  `project_v6_t` sans changer aucun champ ni aucun ordre ; la structure
+  courante FUN7 devient `project_t` et reprend exactement les champs FUN6,
+  avec le bloc Roots Dub à l'emplacement décrit ci-dessus.
+- Ajouter `PROJ_MAGIC_V6` et `PROJ_MAGIC` pour FUN7.
+- FUN6 valide son magic, sa taille 3816 et son checksum avec une fonction
+  calculée sur `sizeof(project_v6_t)`, puis copie les champs historiques
+  dans FUN7 ; les quatre gains deviennent 32768 et l'isolateur reste désactivé.
+- FUN7 valide son propre magic, sa taille 3828 et son checksum sur sa taille.
+- FUN1..FUN5 continuent d'être convertis comme aujourd'hui, puis reçoivent les
+  mêmes valeurs neutres.
+- Ajouter `project_v6_t v6` et `project_t v7` à l'union `proj_tmp`.
+  L'union garde 3840 octets grâce à FUN5 : ne pas la réduire.
+- Les fonctions de capture, application, autosave, sections et backup utilisent
+  le FUN7 courant ; les anciennes structures sont strictement en lecture seule.
+
+### Validation indispensable
+
+Le test hôte doit construire un fixture FUN6 avec les octets de la structure
+historique, vérifier son checksum, l'importer en FUN7 et vérifier les valeurs
+Roots neutres. Il doit aussi construire un FUN7, vérifier son checksum et
+l'importer sans perte. Les fixtures FUN1..FUN5 existantes restent inchangées.
