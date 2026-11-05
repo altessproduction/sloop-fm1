@@ -178,6 +178,8 @@ UI_SMALL static int proj_v6_ok(const project_v6_t *q)
 {
     return q->magic == PROJ_MAGIC_V6 && q->size == sizeof *q && q->sum == proj_v6_sum(q);
 }
+static uint16_t proj_roots_gain[4] = {32768u, 32768u, 32768u, 32768u};
+static uint8_t proj_roots_enabled;
 UI_SMALL static void proj_roots_neutral(project_t *p)
 {
     uint32_t i;
@@ -513,6 +515,9 @@ UI_SMALL static void proj_capture(project_t *p)        /* what is playing now, a
     memset(p, 0, sizeof *p);
     p->magic = PROJ_MAGIC;
     p->size = sizeof *p;
+    for (i = 0; i < 4u; i++)
+        p->roots_gain[i] = proj_roots_gain[i];
+    p->roots_enabled = proj_roots_enabled;
     for (i = 0; i < PROJ_NG; i++)
         p->g[i] = song.g[i];
     p->sel = song.sel;
@@ -548,6 +553,9 @@ static void proj_apply(const project_t *p, int all)
     song.g[G_DRDLY] = (int16_t)clamp(p->drdly, GP[G_DRDLY].min, GP[G_DRDLY].max);   /* (a load and a section, as REV) */
     proj_tx_get(p);                                     /* GLO > TEXTURE (2.6): a load and a section */
     drum_tw_get(p);                                     /* (2.7) the drum sounds' TUNE and DECAY: a load and a section */
+    for (i = 0; i < 4u; i++)
+        proj_roots_gain[i] = p->roots_gain[i] > 32768u ? 32768u : p->roots_gain[i];
+    proj_roots_enabled = (uint8_t)(p->roots_enabled != 0u);
     for (k = 0; k < NTRK; k++) {
         track_t *t = &trk[k];
         const proj_trk_t *s = &p->t[k];
