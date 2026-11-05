@@ -66,3 +66,46 @@ inchangée et devient lecture seule.
 Une modification partielle des seuls tableaux `song.g[]`, de `project_t` ou
 du protocole rendrait les sauvegardes incohérentes. Ce plan fixe le contrat de
 compatibilité avant de modifier les formats binaires et les commandes live.
+
+
+## Précision après lecture complète de project.c et project_test.c
+
+La taille hôte vérifiée par le test de régression est exactement **3 816 octets**
+pour FUN6, avec une limite de charge utile de **3 840 octets** dans
+`storage.c`. Il reste donc 24 octets, et non une marge théorique à supposer.
+
+Un bloc candidat compact pour FUN7 tient dans 12 octets :
+- quatre gains `uint16_t` Q15 (0 = silence, 32768 = gain unitaire) ;
+- un octet d'activation ;
+- trois octets réservés initialisés à zéro ;
+- checksum final déplacé après ce bloc.
+
+La taille attendue serait 3 828 octets, sous réserve de la confirmer par
+`_Static_assert` dans le code et par le test hôte. Ce choix conserve une
+représentation DSP sans conversion ambiguë depuis une échelle UI 7 bits.
+Le gain maximal autorisé à l'interface devra toutefois être défini séparément
+et borné avant conversion vers Q15.
+
+### Contrat de migration à tester
+
+Le test hôte existant est `tests/project_test.c` et inclut directement
+`project.c` sous `PROJ_HOST`. Il vérifie déjà les fixtures FUN1 à FUN5,
+le checksum et le round-trip FUN6. FUN7 devra ajouter explicitement :
+
+1. une structure historique FUN6 de taille figée à 3 816 octets (ne pas
+   redéfinir FUN6 en réutilisant la nouvelle structure) ;
+2. import FUN6 -> FUN7 avec isolateur désactivé et gains unitaires ;
+3. round-trip FUN7 -> FUN7 des quatre gains et du bit d'activation ;
+4. rejet d'un checksum invalide et d'une taille incohérente ;
+5. assertion de taille FUN7 <= 3 840 octets ;
+6. vérification que les conversions FUN1 à FUN5 conservent leurs résultats
+   actuels et reçoivent les valeurs neutres Roots Dub.
+
+### Point d'attention de l'implémentation
+
+Le code actuel utilise `project_t` à la fois comme format courant et comme
+buffer d'application, tandis que le buffer temporaire de flash est une union
+FUN6/FUN5/FUN4/FUN3/FUN2/FUN1. La migration ne peut donc pas consister à
+ajouter simplement un champ à `project_t` : il faut figer une structure
+`project_v6_t`, introduire FUN7 comme format courant, agrandir l'union
+temporaire et vérifier les chemins backup/restore ainsi que l'autosave.
