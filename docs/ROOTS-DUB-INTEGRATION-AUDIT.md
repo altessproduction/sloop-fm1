@@ -110,3 +110,32 @@ Avant de considérer une intégration comme prête :
 - Flash et test FM-1 : non effectués.
 
 Aucune affirmation de fonctionnement matériel n’est faite.
+
+
+## Relevé complémentaire — vrai point d'insertion et sauvegarde
+
+L'inspection de `mix_block()` dans `firmware/src/fx.c` confirme l'ordre exact :
+
+1. Les unités audio des deux cœurs sont additionnées dans `acc[0]`.
+2. TEXTURE et les retours CHORUS / DELAY / REVERB sont ajoutés.
+3. DUST, PUNCH et le filtre DJ global sont appliqués.
+4. Le mix stéréo passe ensuite dans le volume MASTER.
+5. `master_pre()`, le limiteur et le knee final alimentent le DAC.
+6. Le chemin USB FULL repart du mix avant MASTER et possède ses propres états de pré-traitement et son limiteur.
+
+**Point d'insertion recommandé :** juste après `djf_process(mix_l, mix_r, n)`, avant la mise à l'échelle MASTER. À cet endroit, l'isolateur traite le mix stéréo complet, reste indépendant du volume principal et agit aussi sur USB FULL et sur le signal du visualiseur. Il ne doit pas être placé dans les unités parallèles ni dans `master_pre()`, qui est appelé séparément pour DAC et USB.
+
+### Pourquoi les commandes et la sauvegarde ne sont pas encore ajoutées
+
+Les paramètres globaux ne sont pas tous persistés de la même façon :
+
+- `G_COUNT` comprend aussi des réglages système qui ne sont pas stockés dans les projets.
+- Le format projet 6 (`FUN6`) stocke explicitement 32 globals historiques dans `PROJ_NG`, puis des champs réservés et des extensions séparées.
+- Le format 6 a été dimensionné pour tenir dans un objet flash de 3840 octets; sa structure et ses conversions historiques sont protégées par des assertions de taille.
+- Les paramètres de piste sont append-only et les huit paramètres moteur `P_E0..P_E7` doivent rester en fin de liste.
+
+Une intégration propre des quatre gains doit donc introduire un nouveau format de projet versionné (format 7 ou extension latérale explicitement versionnée), conserver le chargement des formats 1 à 6, mettre à jour l'autosave et le backup/restore de l'éditeur, puis ajouter les commandes UI/SysEx. Réutiliser arbitrairement des globals existants ou déplacer des IDs serait une régression de compatibilité.
+
+### Décision d'ingénierie
+
+Le module `roots_isolator.h` reste autonome pour le moment. L'insertion DSP et les contrôles seront réalisés ensemble, après le schéma de persistance et la version projet définis et testables. Cela évite un isolateur qui marche en RAM mais perd ses réglages à l'arrêt, ou qui change les projets anciens.
