@@ -139,3 +139,10 @@ Une intégration propre des quatre gains doit donc introduire un nouveau format 
 ### Décision d'ingénierie
 
 Le module `roots_isolator.h` reste autonome pour le moment. L'insertion DSP et les contrôles seront réalisés ensemble, après le schéma de persistance et la version projet définis et testables. Cela évite un isolateur qui marche en RAM mais perd ses réglages à l'arrêt, ou qui change les projets anciens.
+
+
+## 2026-11-05 — décision DSP après simulation fréquentielle
+
+La simulation du module `roots_isolator.h` (44,1 kHz, sinusoïdes établies) révèle un recouvrement trop important pour un isolateur de performance : à 350 Hz, MIDS atteint environ 1,163 fois l'amplitude d'entrée lorsqu'elle est seule ; à 1 kHz, TOPS reçoit encore environ 0,643. L'unité des quatre gains recompose le signal, mais cela ne garantit pas une séparation correcte lors de l'atténuation de bandes. Le module reste donc expérimental et ne doit pas être raccordé au master bus en l'état. Il faut d'abord remplacer la topologie par un crossover à pentes contrôlées, puis tester phase, sommation, crêtes et les combinaisons de bandes. Simulation documentée dans `ROOTS-DUB-ISOLATOR-DSP.md`.
+
+Le format FUN7 est maintenant spécifié plus précisément : 12 octets de configuration Roots Dub ajoutés au FUN6, taille attendue 3 828 octets ; FUN5 impose que l'union de staging reste à 3 840 octets. L'implémentation binaire reste à faire avec une structure FUN6 historique distincte et des tests hôte de migration.
