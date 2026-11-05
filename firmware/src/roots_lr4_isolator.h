@@ -101,9 +101,9 @@ static inline int32_t roots_lr4_process(roots_lr4_t *s, int32_t input)
         rest=hi;
     }
     bands[3]=rest;
-    bands[0]=roots_lr4_allpass(bands[0],s->allpass[0],&roots_lr4_ap_coeff[1]);
-    bands[0]=roots_lr4_allpass(bands[0],s->allpass[1],&roots_lr4_ap_coeff[2]);
-    bands[1]=roots_lr4_allpass(bands[1],s->allpass[2],&roots_lr4_ap_coeff[2]);
+    bands[0]=roots_lr4_allpass(bands[0],&s->allpass[0],&roots_lr4_ap_coeff[1]);
+    bands[0]=roots_lr4_allpass(bands[0],&s->allpass[1],&roots_lr4_ap_coeff[2]);
+    bands[1]=roots_lr4_allpass(bands[1],&s->allpass[2],&roots_lr4_ap_coeff[2]);
     for (i=0;i<4;i++) mix+=(int64_t)bands[i]*s->gain[i];
     filtered=roots_lr4_sat(mix >> 15);
     if (s->enabled) s->wet = s->wet > 32255u ? 32768u : (uint16_t)(s->wet + 512u);
