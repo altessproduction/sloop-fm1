@@ -6,9 +6,9 @@ Nature : audit statique des sources, sans compilation ni test matériel.
 
 ## Décision technique
 
-Ne pas ajouter encore de paramètres persistants ni brancher le prototype web sur le moteur. Le chemin audio est déjà très intégré : les paramètres sont exposés par le protocole SysEx, les projets et presets ont des formats binaires historiques, et le moteur tourne dans un budget temps réel serré. Une modification naïve peut casser la compatibilité des projets, user presets, contrôleurs web et builds FM-1.
+La persistance FUN7 et les commandes SysEx ROOTS DUB 78/79 sont maintenant implémentées, avec les curseurs correspondants dans l’éditeur web v13. En revanche, le prototype LR4 reste autonome et n’est pas raccordé au moteur audio. Le chemin audio est très intégré et le budget temps réel doit être mesuré : aucune insertion dans le bus master ne doit être faite avant validation des tests fixes, de la fréquence d’échantillonnage, du coût CPU et des transitoires.
 
-La prochaine intégration doit être incrémentale : d’abord un module DSP autonome et testable, ensuite son insertion dans le bus master, puis seulement les contrôles et la sauvegarde.
+La suite est donc limitée à la validation logicielle et à la mesure sur cible ; l’interface et la persistance ne sont plus des travaux à venir pour cette première étape.
 
 ## Ce que les sources confirment
 
@@ -125,16 +125,13 @@ L'inspection de `mix_block()` dans `firmware/src/fx.c` confirme l'ordre exact :
 
 **Point d'insertion recommandé :** juste après `djf_process(mix_l, mix_r, n)`, avant la mise à l'échelle MASTER. À cet endroit, l'isolateur traite le mix stéréo complet, reste indépendant du volume principal et agit aussi sur USB FULL et sur le signal du visualiseur. Il ne doit pas être placé dans les unités parallèles ni dans `master_pre()`, qui est appelé séparément pour DAC et USB.
 
-### Pourquoi les commandes et la sauvegarde ne sont pas encore ajoutées
+### Persistance et commandes ROOTS DUB — état actuel
 
-Les paramètres globaux ne sont pas tous persistés de la même façon :
+Le format FUN7 ajoute 12 octets au format FUN6 historique : quatre gains Q15, un indicateur d'activation et trois octets réservés. FUN6 reste une structure de lecture immuable ; les imports FUN1 à FUN6 initialisent l'isolateur à l'état neutre (désactivé, gains unitaires). FUN7 est utilisé pour les captures, les sections, l'autosave et les sauvegardes/restaurations projet.
 
-- `G_COUNT` comprend aussi des réglages système qui ne sont pas stockés dans les projets.
-- Le format projet 6 (`FUN6`) stocke explicitement 32 globals historiques dans `PROJ_NG`, puis des champs réservés et des extensions séparées.
-- Le format 6 a été dimensionné pour tenir dans un objet flash de 3840 octets; sa structure et ses conversions historiques sont protégées par des assertions de taille.
-- Les paramètres de piste sont append-only et les huit paramètres moteur `P_E0..P_E7` doivent rester en fin de liste.
+Les commandes SysEx 78/79 sont exposées par le protocole v13. Elles lisent et modifient les réglages runtime, que la capture normale du projet persiste ensuite. L'éditeur web v13 affiche les quatre curseurs SUB/BASS/MIDS/TOPS et l'activation ; les versions antérieures masquent ce panneau.
 
-Une intégration propre des quatre gains doit donc introduire un nouveau format de projet versionné (format 7 ou extension latérale explicitement versionnée), conserver le chargement des formats 1 à 6, mettre à jour l'autosave et le backup/restore de l'éditeur, puis ajouter les commandes UI/SysEx. Réutiliser arbitrairement des globals existants ou déplacer des IDs serait une régression de compatibilité.
+Ces réglages ne pilotent pour l'instant que les données du projet. Le DSP LR4 n'est pas connecté au mixage : déplacer les curseurs ne modifie donc pas encore le son du FM-1.
 
 ### Décision d'ingénierie
 
