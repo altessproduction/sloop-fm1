@@ -180,3 +180,10 @@ Ajouts de cette passe :
 - Le chemin de restauration éditeur `project_restore()` n'a pas de test hôte direct : il dépend de l'état flash et de l'application du projet. Les tests existants couvrent séparément l'import des formats et les transactions A/B, pas leur orchestration de bout en bout.
 
 Ces tests ont été ajoutés au dépôt mais ne sont pas compilés/exécutés ici. Il reste nécessaire de lancer le banc complet, puis de tester des backups FUN6/FUN7 réels sur appareil avant fusion.
+
+
+### Relecture de sûreté des nouveaux tests
+
+La relecture du test de dépassement a aussi corrigé son propre buffer : la source de test est maintenant allouée à 3 841 octets, de sorte que le scénario « taille supérieure à 3 840 » ne transmet pas un pointeur vers un tableau trop court. Le buffer de lecture reste limité à 3 840 octets.
+
+La restauration BK_PUT complète n'a volontairement pas été simulée par un faux test superficiel. `ed_backup()` dépend de l'éditeur, du staging partagé, de l'état transport, de la flash et des fonctions d'application UI/audio. Pour la tester correctement, il faut un banc d'intégration qui compile réellement cette unité avec des doubles cohérents de la flash et du runtime. En attendant, la vérification statique confirme l'ordre des contrôles : longueur/CRC de transfert, dispatch d'objet, puis validation/migration projet avant écriture flash. Les retours 2 (données invalides), 3 (transport actif) et 4 (flash/écriture indisponible) sont préservés.
