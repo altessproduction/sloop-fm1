@@ -14,7 +14,7 @@ typedef struct {
     uint8_t enabled;
 } roots_iso_t;
 /* alpha = 1-exp(-2*pi*fc/44100), Q15; split points 120, 350, 2500 Hz. */
-static const int16_t roots_iso_alpha[3] = {1110, 1588, 9560};
+static const int16_t roots_iso_alpha[3] = {555, 1594, 9819};
 static inline int32_t roots_iso_clamp_sample(int32_t x)
 {
     return x > ROOTS_ISO_MAX ? ROOTS_ISO_MAX : x < -ROOTS_ISO_MAX ? -ROOTS_ISO_MAX : x;
