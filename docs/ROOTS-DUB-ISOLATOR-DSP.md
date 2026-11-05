@@ -52,3 +52,59 @@ Une simulation sinusoïdale à 44,1 kHz avec les coefficients actuels (`555, 159
 Ces chiffres sont une simulation du modèle de filtres, pas une mesure sur FM-1. Le dépassement MIDS à 350 Hz est un signal d'alarme : le prototype n'est pas encore un isolateur DJ à bandes bien séparées. Des gains de bande extrêmes peuvent également créer des crêtes supérieures à l'entrée, avant même le limiteur maître.
 
 **Décision : ne pas raccorder cette topologie au master bus comme isolateur final.** Garder le module comme banc d'essai et concevoir une vraie séparation complémentaire à pentes contrôlées (par exemple crossover Linkwitz–Riley 4e ordre), puis mesurer sommation, phase, crêtes et réponse pour les 15 combinaisons de bandes avant intégration. Les tests actuels de bypass, reconstruction DC et bornage ne suffisent pas à qualifier un isolateur musical.
+
+
+## Conception de remplacement : crossover Linkwitz–Riley 4e ordre
+
+La prochaine version doit remplacer les trois séparations à un pôle par une
+cascade de crossovers LR4. Pour chaque fréquence de coupure (120, 350 et
+2 500 Hz), construire un passe-bas et un passe-haut LR4, chacun composé de
+deux biquads Butterworth identiques (`Q = 1/sqrt(2)`). Le passe-bas devient
+la bande courante ; le passe-haut alimente le séparateur suivant :
+
+```
+entrée -> LR4 @ 120 Hz -> SUB (LP) + reste (HP)
+reste  -> LR4 @ 350 Hz -> BASS (LP) + reste (HP)
+reste  -> LR4 @ 2.5 kHz -> MIDS (LP) + TOPS (HP)
+```
+
+Pour un biquad bilinéaire à fréquence d'échantillonnage `fs`, poser
+`K = tan(pi * fc / fs)`, `D = 1 + sqrt(2)*K + K*K`.
+Les coefficients normalisés sont :
+
+- passe-bas : `b0=K*K/D, b1=2*b0, b2=b0`
+- passe-haut : `b0=1/D, b1=-2*b0, b2=b0`
+- les deux : `a1=2*(K*K-1)/D, a2=(1-sqrt(2)*K+K*K)/D`
+
+Chaque biquad est exécuté deux fois en cascade pour obtenir LR4. Quantifier
+les coefficients en Q30 (ou Q28 si les mesures CPU le justifient), garder les
+états en 64 bits si nécessaire, et saturer les conversions vers l'audio
+32 bits. Calculer les coefficients hors de l'ISR : ils sont constants à 44,1
+kHz pour cette première version.
+
+### Structure et coût à mesurer
+
+Trois séparateurs × (deux biquads passe-bas + deux passe-haut) = 12 biquads
+par canal, donc 24 pour la stéréo. Un biquad direct-form II transposé utilise
+deux états par section. Prévoir deux canaux totalement indépendants. Le coût
+théorique est de l'ordre de 120 multiplications par échantillon stéréo (selon
+l'implémentation et les opérations fusionnées), à mesurer sur le FM-1 avant
+d'activer l'effet. Si le coût est trop élevé, optimiser sans modifier la
+réponse mesurée.
+
+### Tests d'acceptation avant raccordement
+
+1. Réponse de la somme des quatre bandes à gains unitaires : écart inférieur
+   à ±0,1 dB sur 20 Hz–20 kHz (hors limites de quantification).
+2. Pentes d'atténuation conformes au LR4 : environ 24 dB/octave de chaque
+   côté de chaque coupure, sans bosse excessive à la coupure.
+3. Vérifier les 15 combinaisons non vides de bandes (gain 0 ou 1), en réponse
+   fréquentielle et en crête temporelle.
+4. Vérifier la stabilité après silence, transitions bypass/enable, et
+   changement de gain sans clic (rampe de gain par bloc).
+5. Mesurer la consommation CPU et RAM sur la cible, ainsi que la marge de
+   crête avec les quatre bandes à +gain maximal autorisé.
+6. Garder un bypass strictement bit-identique quand l'effet est désactivé.
+
+Cette conception est une spécification de travail, pas encore une
+implémentation validée. Le prototype actuel reste séparé du bus maître.
