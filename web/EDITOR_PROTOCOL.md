@@ -7,6 +7,8 @@ protocol v3; commands 31-32 (any track's parameters) form protocol v4; command 3
 (SLOOP 2.3); commands 37-40 (the steps' nudges and parameter locks) form protocol v7, commands 41-42 (the
 steps' fill conditions) protocol v8 and commands 68-71 (the FM6 engine's patches) protocol v9 (all SLOOP 2.4).
 
+**v13 ROOTS DUB:** INFO reports protocol version 13. Commands 78 and 79 access the project-scoped four-band isolator settings in FUN7. Older command IDs and layouts are unchanged.
+
 **v3 (four tracks):** the device has four tracks: 1..3 are synth parts, 4 is the drum track. One
 of them is *selected* (the TRACKS page on the device, or `TRACK`). Every v1 / v2 command acts on the
 selected track (its parameters, engine, preset, steps, the user presets it stores or loads); `TRACK`,
@@ -113,6 +115,8 @@ An absent status byte retains the original reply format.
 | 69 FM6_PUT | target, index, the 128-byte packed patch | target, index, rc |
 | 70 FM6_LIST | — | factory count, bank count, then per slot (factory first): used (0/1), name string ("" if empty) |
 | 71 FM6_ERASE | bank index | index, rc |
+| 78 ROOTS_GET | — | enabled, SUB, BASS, MIDS, TOPS (0..127; 127 = unity) |
+| 79 ROOTS_SET | enabled, SUB, BASS, MIDS, TOPS | normalized enabled and quantized gains |
 
 **pack7:** groups of up to 7 bytes, each preceded by one byte holding their top bits
 (bit j = bit 7 of byte j).
@@ -486,3 +490,10 @@ before 2.7 does not answer `LIVE`: the page keeps its mixer and keys (TRACK_MIX,
   Felucca's own storage; never the app or the update area. Since SLOOP 2.4 every one of them, and
   `BK_PUT` of a preset bank, answers rc 3 while the song plays (as the panel refuses to save then): a
   flash erase silences the audio for about 50 ms.
+
+
+## ROOTS DUB
+
+Commands 78/79 read and write four 7-bit gains stored as Q15 values in the current FUN7 project. Enabled is normalized to 0/1. Gain 127 is unity (Q15 32768); 0 is mute. SET updates runtime state; normal project capture and autosave persist it. The commands expose settings only: the LR4 processor is not yet connected to the master audio path.
+
+**FUN7 project and backup compatibility:** FUN7 is 3,828 bytes (FUN6 was 3,816 bytes); the four gains, enable flag and reserved bytes are covered by the project checksum. The backup working-project object (ID 0) and section objects (IDs 2..5) now export FUN7. On restore, each non-empty project object is validated and passed through `proj_import`: FUN1..FUN6 are converted to FUN7, with Roots disabled and unity gains, while invalid sizes, magic values or checksums are rejected. An empty section remains a zero-length object. User preset banks (IDs 6..7) keep their independent UPB1 layout and are not rewritten by this project-format change. The 3,840-byte staging union still accommodates historical FUN5 and current FUN7 payloads.

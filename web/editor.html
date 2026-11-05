@@ -961,6 +961,16 @@
       <!-- (2.7) the drum track's sound: what the FM-1's DRUMS screen sets (the kit page, the SOUND page) -->
       <div class="card" id="drumpanel" hidden></div>
       <div class="groups" id="groups"></div>
+      <div class="card" id="roots-panel" hidden>
+        <h2>ROOTS DUB · 4-band isolator</h2>
+        <p class="dim">Réglages du projet FUN7 · 127 = unity · ces commandes mémorisent les gains, le DSP embarqué reste à intégrer.</p>
+        <label class="bar"><input type="checkbox" id="roots-enabled"> Activer l’isolation (préparation)</label>
+        <div class="fld"><label for="roots-sub">SUB</label><input id="roots-sub" type="range" min="0" max="127" value="127"><output id="roots-sub-v">127</output></div>
+        <div class="fld"><label for="roots-bass">BASS</label><input id="roots-bass" type="range" min="0" max="127" value="127"><output id="roots-bass-v">127</output></div>
+        <div class="fld"><label for="roots-mids">MIDS</label><input id="roots-mids" type="range" min="0" max="127" value="127"><output id="roots-mids-v">127</output></div>
+        <div class="fld"><label for="roots-tops">TOPS</label><input id="roots-tops" type="range" min="0" max="127" value="127"><output id="roots-tops-v">127</output></div>
+        <p class="dim" id="roots-status" role="status">En attente du firmware v13.</p>
+      </div>
       <!-- the FM6 engine's patch (firmware protocol v9): only while the selected track plays FM6 -->
       <div class="card" id="fm6panel" hidden>
         <h2 data-t="fm6Title" data-ic="ui_knob"></h2>
@@ -1227,7 +1237,7 @@ const CMD = { INFO: 1, GET: 2, SET: 3, DUMP: 4, DESC: 5, STEP_GET: 6, STEP_SET: 
   FILL_GET: 41, FILL_SET: 42,                         /* v8 (SLOOP 2.4): the steps' fill conditions */
   FM6_GET: 68, FM6_PUT: 69, FM6_LIST: 70, FM6_ERASE: 71,    /* v9 (SLOOP 2.4): the FM6 engine's patches (Felucca 1.0's numbers) */
   DSYN_LIST: 72, DSYN_GET: 73, DSYN_PUT: 74, DSYN_STORE: 75, DSYN_PLAY: 76,   /* v10 (SLOOP 2.5): the SYN drum kits */
-  LIVE: 77 };                                         /* v12 (SLOOP 2.7): the LIVE page (firmware editor_live.c) */
+  LIVE: 77, ROOTS_GET: 78, ROOTS_SET: 79 };              /* v13: ROOTS DUB four-band isolator */
 /* v12: LIVE ops (firmware editor_live.c) and the layers its keys reach (seq.c LY_*: 5 SEL, 6 GLO, 7 SAVE) */
 const LIVE = { STATE: 0, PLAY: 1, KEY: 2, FX: 3, REC: 4, UNDO: 5, LY_KEY: 5, LY_MIX: 6, LY_SONG: 7, NFX: 27,
   /* (2.7) the page's own (editor_live.c 6..12): ROLL and ERASE while held, the pattern's tools, a chain of sections, THROW,
@@ -1391,6 +1401,8 @@ const parse = {
   },
   [CMD.GET](a) { const r = new Reader(a); return { scope: r.b(), id: r.b(), value: r.v() }; },
   [CMD.SET](a) { return parse[CMD.GET](a); },
+  [CMD.ROOTS_GET](a) { if (a.length !== 5) throw new Error("bad ROOTS reply"); return { enabled: !!a[0], gains: a.slice(1, 5).map((x) => Math.min(127, x)) }; },
+  [CMD.ROOTS_SET](a) { return parse[CMD.ROOTS_GET](a); },
   /* needs the counts from INFO */
   [CMD.DUMP](a, info) {
     const r = new Reader(a);
@@ -1568,6 +1580,8 @@ function upName(s) { return String(s ?? "").replace(/[^\x20-\x7E]/g, "").trim().
 
 const req = {
   info: () => [CMD.INFO, []],
+  rootsGet: () => [CMD.ROOTS_GET, []],
+  rootsSet: (enabled, gains) => [CMD.ROOTS_SET, [enabled ? 1 : 0, ...Array.from(gains, (x) => Math.max(0, Math.min(127, Math.round(x))))]],
   get: (scope, id) => [CMD.GET, [scope, id]],
   set: (scope, id, v) => [CMD.SET, [scope, id, ...v14enc(v)]],
   dump: () => [CMD.DUMP, []],
@@ -2975,7 +2989,7 @@ function makeMockDevice(opt = {}) {
     14, 14, 15, 15, 13, 13, 15, 15, 13, 13, 7, 7, 7, 14, 14, 15, 15];
   const laneOf = (n) => (n < 35 ? 0 : n > 81 ? 13 : LANE_OF_GM[n - 35]);
   const v5 = !opt.legacy && !opt.v3;              /* SLOOP 2.0: steps with level / ratchet, DRUM_STEP, TRACK solo */
-  const mockProto = opt.noBackup ? 5 : opt.v7 ? 7 : opt.v8 ? 8 : opt.v9 ? 9 : opt.v10 ? 10 : opt.v11 ? 11 : 12;   /* INFO's protocol */
+  const mockProto = opt.noBackup ? 5 : opt.v7 ? 7 : opt.v8 ? 8 : opt.v9 ? 9 : opt.v10 ? 10 : opt.v11 ? 11 : opt.roots ? 13 : 12;   /* INFO's protocol */
   /* the drum step as an old (v1..v4) step: its first 4 lanes as GM notes, ACC when one is hard (editor.c ed_dstep_old) */
   const dOld = (d) => {
     const notes = [];
@@ -3156,7 +3170,7 @@ function makeMockDevice(opt = {}) {
     settings: mockSettings(),                       /* v6: the settings object (2.5: a PER3 with a song order) */
     dsyn: null, dsynStored: null, dsynPlayed: [],  /* v10: the SYN kits (RAM, flash), the auditions heard */
     ml: null,                                       /* 2.6: the MIDI LEARN map (seq.c ml_tab, 16 x 2 bytes), null: none */
-    bkSnap: null, bkPut: null,
+    bkSnap: null, bkPut: null, roots: { enabled: false, gains: [127, 127, 127, 127] },
     watch: false, v4: false, lastReq: 0, playing: false,
     /* v12 (LIVE): the transport's start, the sections (A..D: playing, asked for at a time), song mode, SONG REC, fills,
        the punch-in effect, REC waiting for a note, undo (0 none, 1 undo, 2 redo), a store waiting for its second press,
@@ -3325,6 +3339,15 @@ function makeMockDevice(opt = {}) {
         break;
       case CMD.PING:
         b(0);
+        break;
+      case CMD.ROOTS_GET:
+        if (a.length || mockProto < 13) return null;
+        b(st.roots.enabled ? 1 : 0); st.roots.gains.forEach(b);
+        break;
+      case CMD.ROOTS_SET:
+        if (a.length !== 5 || mockProto < 13) return null;
+        st.roots = { enabled: !!a[0], gains: a.slice(1, 5).map((x) => Math.max(0, Math.min(127, x))) };
+        b(st.roots.enabled ? 1 : 0); st.roots.gains.forEach(b);
         break;
       case CMD.INFO:
         s(opt.legacy ? "FELUCCA 0.4 BETA (MOCK)" : opt.v3 ? "FELUCCA 0.8 (MOCK)" : "FELUCCA SLOOP 2.6 (MOCK)"); b(ENG.length); b(P_COUNT); b(G_COUNT); b(NSTEP); b(P_E0);
@@ -5951,7 +5974,7 @@ async function connect() {
   sayK("connecting");
   try {
     if (!access) {
-      if (MOCK) { mock = makeMockDevice({ auto: false, legacy: QS.get("legacy") === "1", onChange: previewChanged }); access = mock.access; }
+      if (MOCK) { mock = makeMockDevice({ auto: false, legacy: QS.get("legacy") === "1", roots: QS.get("roots") === "1", onChange: previewChanged }); access = mock.access; }
       else {
         try { access = await navigator.requestMIDIAccess({ sysex: true }); }
         catch (e) { sayK("denied"); return; }
@@ -6032,6 +6055,43 @@ function onState(e) {
 
 const rq = (r, opt) => dev.link.request(r, opt);
 async function getDesc(scope, id) { return parse[CMD.DESC](await rq(req.desc(scope, id))); }
+function rootsBuild() {
+  const panel = $("roots-panel");
+  if (!panel) return;
+  const supported = !!dev && dev.info.proto >= 13 && !!dev.roots;
+  panel.hidden = !supported;
+  if (!supported) return;
+  const names = ["sub", "bass", "mids", "tops"];
+  $("roots-enabled").checked = dev.roots.enabled;
+  names.forEach((name, i) => {
+    const input = $("roots-" + name);
+    input.value = dev.roots.gains[i];
+    $("roots-" + name + "-v").textContent = input.value;
+    input.oninput = () => { $("roots-" + name + "-v").textContent = input.value; };
+    input.onchange = rootsCommit;
+  });
+  $("roots-enabled").onchange = rootsCommit;
+  $("roots-status").textContent = "Synchronisé avec le projet courant.";
+}
+let rootsWrite = Promise.resolve();
+function rootsCommit() {
+  if (!dev || dev.info.proto < 13) return;
+  const names = ["sub", "bass", "mids", "tops"];
+  const gains = names.map((name) => +$("roots-" + name).value);
+  const enabled = $("roots-enabled").checked;
+  dev.roots = { enabled, gains };
+  $("roots-status").textContent = "Écriture des réglages…";
+  const d = dev;
+  rootsWrite = rootsWrite.catch(() => {}).then(async () => {
+    if (dev !== d) return;
+    const r = parse[CMD.ROOTS_SET](await d.link.request(req.rootsSet(enabled, gains), { key: "roots-dub" }));
+    if (dev !== d) return;
+    d.roots = r;
+    names.forEach((name, i) => { $("roots-" + name).value = r.gains[i]; $("roots-" + name + "-v").textContent = r.gains[i]; });
+    $("roots-enabled").checked = r.enabled;
+    $("roots-status").textContent = "Valeurs appliquées ; conservées à la sauvegarde du projet FUN7.";
+  }).catch((e) => { if (dev === d) $("roots-status").textContent = "Erreur de communication : " + e.message; });
+}
 async function getDump() { lastDump = Date.now(); return parse[CMD.DUMP](await rq(req.dump()), dev.info); }
 async function getStep(i) { return parse[CMD.STEP_GET](await rq(req.stepGet(i))); }
 async function getDrumStep(i) { return parse[CMD.DRUM_STEP](await rq(req.drumStep(i))); }
@@ -6076,7 +6136,10 @@ async function load(d) {
     await libAdopt(d);
     if (d.info.ntrk) d.sel = parse[CMD.TRACK](await d.link.request(req.track())).sel;   /* v3: the selected track */
     d.dump = await getDump();
+    d.roots = null;
+    if (d.info.proto >= 13) { try { d.roots = parse[CMD.ROOTS_GET](await d.link.request(req.rootsGet())); } catch (e) { if (e.message === "closed") throw e; } }
     buildUI();
+    rootsBuild();
     renderPanels();
     await loadSteps();
     if (d.info.ntrk) await readMixer();

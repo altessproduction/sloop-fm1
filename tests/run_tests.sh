@@ -36,6 +36,11 @@ mkdir -p build/gen
 [ build/gen/felucca_tables.h -nt tools/gen_tables.py ] || python3 tools/gen_tables.py build/gen/felucca_tables.h
 [ build/gen/felucca_fm6.h -nt tools/gen_fm6_patches.py ] || python3 tools/gen_fm6_patches.py build/gen/felucca_fm6.h
 
+$CC -Ifirmware/src -o "$OUT/roots_isolator_test" tests/roots_isolator_test.c
+run "ROOTS DUB: legacy prototype checks" "$OUT/roots_isolator_test"
+$CC -Ifirmware/src -o "$OUT/roots_lr4_isolator_test" tests/roots_lr4_isolator_test.c -lm
+run "ROOTS DUB: LR4 fixed-point crossover checks" "$OUT/roots_lr4_isolator_test"
+
 $CC -o "$OUT/storage_test" tests/storage_test.c
 run "flash storage (A/B, torn writes)" "$OUT/storage_test"
 
@@ -160,7 +165,7 @@ run "DSP render (ANALOG preset 0)" "$OUT/hostsim" 0 0 1 "$OUT/render.wav"
 mkdir -p build/tracks_demo
 run "TRACKS: 4-track pattern, live recording (lengths, swing), voice budget, engine switch, cost" env TRACKS=build/tracks_demo "$OUT/hostsim" 0 0 1 "$OUT/tracks.wav"
 $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/project_test" tests/project_test.c -lm
-run "project formats (FUN4 / FUN3 / FUN2 / FUN1 -> FUN5), capture / apply, autosave" "$OUT/project_test"
+run "project formats (FUN1..FUN6 -> FUN7, FUN7 size/checksum boundaries, round-trip), capture / apply, autosave" "$OUT/project_test"
 $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/slicer_test" tests/slicer_test.c -lm
 mkdir -p build/slicer_demo
 run "SLICER: no clicks, timing, sync with the sequencer, STUT, cost, demos" "$OUT/slicer_test" build/slicer_demo

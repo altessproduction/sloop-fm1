@@ -1,13 +1,13 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
-/* Host test of the project formats (firmware/src/project.c, -DPROJ_HOST part). Format 5 ("FUN5",
- * SLOOP 2.4: format 4 + per-step nudges, parameter locks and fill conditions) is written; format 4 ("FUN4", SLOOP 2.0:
- * 10-byte steps with levels and ratchets, the drum track's 16 lanes, P_CHORD), format 3 ("FUN3", SLOOP
- * 1.x), format 2 ("FUN2", 53 parameters per track) and format 1 ("FUN1"), built byte for byte as the
- * firmware stored them, convert: every old value at its parameter, the parameters added since at their
- * defaults, the swings onto the MPC scale (x 0.8), synth steps as they were, the drum track's notes onto
- * its lanes (accent: hard), globals, selection, the engine bytes (kept; the drum track's 0), no nudge, no
- * lock, no fill condition; damaged ones are refused. Run by tests/run_tests.sh (needs build/gen). */
+/* Host test of the project formats (firmware/src/project.c, -DPROJ_HOST part). Format 7 ("FUN7",
+ * Roots Dub settings) is written; format 6 ("FUN6") is imported unchanged, formats 5 ("FUN5", SLOOP 2.4:
+ * nudges, parameter locks and fill conditions), 4 ("FUN4", SLOOP 2.0: 10-byte steps with levels and
+ * ratchets, the drum track's 16 lanes, P_CHORD), 3 ("FUN3", SLOOP 1.x), 2 ("FUN2", 53 parameters per
+ * track) and 1 ("FUN1") are built byte for byte as the firmware stored them and converted: every old
+ * value at its parameter, new parameters at defaults, swings onto the MPC scale (x 0.8), synth steps as
+ * they were, drum notes onto lanes (accent: hard), globals, selection and engine bytes; no nudge, lock or
+ * fill condition where absent. Damaged files are refused. Run by tests/run_tests.sh (needs build/gen). */
 #define main hostsim_main
 #include <stddef.h>
 #include "hostsim.c"
@@ -24,6 +24,15 @@ static int check(const char *what, int ok)
 {
     printf("%-66s %s\n", what, ok ? "ok" : "FAIL");
     return ok ? 0 : 1;
+}
+
+static int roots_neutral_ok(const project_t *p)
+{
+    uint32_t i;
+    for (i = 0; i < 4u; i++)
+        if (p->roots_gain[i] != 32768u)
+            return 0;
+    return !p->roots_enabled && !p->roots_rsv[0] && !p->roots_rsv[1] && !p->roots_rsv[2];
 }
 
 /* the value parameter k (old id) of track t had in the old project */
@@ -115,9 +124,11 @@ int main(void)
     static project_v1_t v1;
     static project_v4_t v4;
     static project_t q, q2;
+    static project_v6_t v6;
     static project_v5_t v5;
     static union {
-        project_t v6;
+        project_t v7;
+        project_v6_t v6;
         project_v5_t v5;
         project_v4_t v4;
         project_v3_t v3;
@@ -131,8 +142,9 @@ int main(void)
                  P_CHORD + 1 == P_TFLT && P_TFLT + 1 == P_STRUM && P_STRUM + 1 == P_VLEAD && P_VLEAD + 1 == P_ITYPE &&
                  P_LPOL + 1 == P_E0 && P_E0 == 63 && P_COUNT == PROJ_NP_V5 + 10u && PROJ_NP_V5 == PROJ_NP_V4 + 3u &&
                  PROJ_NP_V4 == PROJ_NP_V3 + 1u && P_SLDEPTH + 1 == P_CHORD);
-    bad += check("format 6 fits one flash object (3816 of 3840 bytes); 4 slots fit .noinit (with panel, settings, dbg, bootguard)",
-                 sizeof(project_t) <= 3840u && 4u * sizeof(project_t) <= 0x3D50u - 256u && sizeof(project_t) == 3816u);
+    bad += check("FUN6 remains 3816 bytes; FUN7 is 3828 bytes and four slots fit .noinit and flash",
+                 sizeof(project_v6_t) == 3816u && sizeof(project_t) == 3828u && sizeof(project_t) <= 3840u &&
+                 4u * sizeof(project_t) <= 0x3D50u - 256u);
     {   /* every 2.6 parameter's range fits its byte */
         uint32_t k, fits = 1;
         for (k = P_ITYPE; k < P_E0; k++) fits &= TP[k].min >= 0 && TP[k].max <= 255;
@@ -152,14 +164,14 @@ int main(void)
     v3.sum = proj_hash(&v3, sizeof v3 - 4u);
     memcpy(&buf, &v3, sizeof v3);
     ok = proj_import(&q, &buf, (int)sizeof v3);
-    bad += check("FUN3 -> FUN6: converted, valid format 6 slot", ok && proj_ok(&q) && q.magic == PROJ_MAGIC);
+    bad += check("FUN3 -> FUN7: converted, valid FUN7 slot", ok && proj_ok(&q) && q.magic == PROJ_MAGIC && roots_neutral_ok(&q));
     ok = q.sel == 3 && q.g[G_SWING] == 40;
     for (i = 0; i < PROJ_NG_V3; i++)
         ok &= i == G_SWING || q.g[i] == (int16_t)(300 + i);
     for (i = PROJ_NG_V3; i < PROJ_NG; i++)
         ok &= q.g[i] == GP[i].def;
     ok &= q.drdly == 0;
-    bad += check("FUN3 -> FUN6: globals (swing 50 -> 40: the MPC scale), the new ones default", ok);
+    bad += check("FUN3 -> FUN7: globals (swing 50 -> 40: the MPC scale), the new ones default", ok);
     ok = 1;
     for (t = 0; t < NTRK; t++) {
         const proj_trk_t *n = &q.t[t];
@@ -178,7 +190,7 @@ int main(void)
         for (k = P_ITYPE; k < P_E0; k++)
             ok &= pt_get(n, k) == TP[k].def;
     }
-    bad += check("FUN3 -> FUN6: parameters (P_E0.. moved), steps, drum notes -> lanes, no lock, no fill", ok);
+    bad += check("FUN3 -> FUN7: parameters (P_E0.. moved), steps, drum notes -> lanes, no lock, no fill", ok);
 
     /* format 2, as written before the SLICER */
     memset(&v2, 0, sizeof v2);
@@ -192,17 +204,17 @@ int main(void)
     v2.sum = proj_hash(&v2, sizeof v2 - 4u);
     bad += check("FUN2 image is 2552 bytes (as stored)", sizeof v2 == 2552u);
     memcpy(&buf, &v2, sizeof v2);
-    ok = proj_import(&q, &buf, (int)sizeof v2);
-    bad += check("FUN2 -> FUN6: converted, valid format 6 slot", ok && proj_ok(&q) && q.magic == PROJ_MAGIC);
+    ok = proj_import(&q, &buf, (int)sizeof v2) && roots_neutral_ok(&q);
+    bad += check("FUN2 -> FUN7: converted, valid FUN7 slot", ok && proj_ok(&q) && q.magic == PROJ_MAGIC);
     ok = q.sel == 2;
     for (i = 0; i < PROJ_NG_V2; i++)
         ok &= i == G_SWING || q.g[i] == (int16_t)(500 + i);
-    bad += check("FUN2 -> FUN6: globals and selected track", ok);
+    bad += check("FUN2 -> FUN7: globals and selected track", ok);
     ok = 1;
     for (t = 0; t < NTRK; t++)
         ok &= track_ok_v2(&q.t[t], &v2.t[t], t);
-    bad += check("FUN2 -> FUN6: every parameter mapped, SLICER OFF, CHORD OFF (4 tracks)", ok);
-    bad += check("FUN2 -> FUN6: engine bytes kept (WHEEL 7, ANALOG 0, TRIO 6), drum 0",
+    bad += check("FUN2 -> FUN7: every parameter mapped, SLICER OFF, CHORD OFF (4 tracks)", ok);
+    bad += check("FUN2 -> FUN7: engine bytes kept (WHEEL 7, ANALOG 0, TRIO 6), drum 0",
                  q.t[0].engine == 7 && q.t[1].engine == 0 && q.t[2].engine == 6 && q.t[3].engine == 0 &&
                  str_eq(ENGINES[7]->name, "WHEEL") && str_eq(ENGINES[6]->name, "TRIO") && NENGINES > 8);
 
@@ -226,7 +238,7 @@ int main(void)
     v4.sum = proj_hash(&v4, sizeof v4 - 4u);
     bad += check("FUN4 image is 3112 bytes (as stored)", sizeof v4 == 3112u);
     memcpy(&buf, &v4, sizeof v4);
-    ok = proj_import(&q2, &buf, (int)sizeof v4) && proj_ok(&q2) && q2.magic == PROJ_MAGIC && q2.sel == 1 && q2.t[1].engine == 8 &&
+    ok = proj_import(&q2, &buf, (int)sizeof v4) && roots_neutral_ok(&q2) && proj_ok(&q2) && q2.magic == PROJ_MAGIC && q2.sel == 1 && q2.t[1].engine == 8 &&
          q2.t[0].step[3].lvl == 0x9C && q2.t[0].step[3].rat == 0x27 && dstep_lvl(&q2.t[TRK_DRUM].dstep[5], 13) == LV_GHOST &&
          dstep_rat(&q2.t[TRK_DRUM].dstep[5], 13) == 2u && !memcmp(q2.g, v4.g, sizeof q2.g);
     for (t = 0; t < NTRK; t++) {
@@ -240,13 +252,13 @@ int main(void)
         for (i = P_ITYPE; i < P_E0; i++)
             ok &= pt_get(&q2.t[t], i) == TP[i].def;
     }
-    bad += check("FUN4 -> FUN6: as stored (levels, ratchets, lanes, engine 8; P_E0.. moved, FILTER off), zero nudges, locks free, no fill condition", ok);
+    bad += check("FUN4 -> FUN7: as stored (levels, ratchets, lanes, engine 8; P_E0.. moved, FILTER off), zero nudges, locks free, no fill condition", ok);
     v4.t[2].step[1].vel ^= 1u;
     memcpy(&buf, &v4, sizeof v4);
     bad += check("FUN4 with a bad checksum: refused", !proj_import(&q2, &buf, (int)sizeof v4));
     v4.t[2].step[1].vel ^= 1u;
 
-    /* a FUN5 image (SLOOP 2.4 .. 2.5, as stored) -> FUN6: by id, the 2.6 ten at their defaults, the nudges and
+    /* a FUN5 image (SLOOP 2.4 .. 2.5, as stored) -> FUN7: by id, the 2.6 ten at their defaults, the nudges and
      * conditions into a byte a step, a lock on P_E0.. moved with it (format 5's 53.. -> 63..) */
     memset(&v5, 0, sizeof v5);
     v5.magic = PROJ_MAGIC_V5;
@@ -270,7 +282,7 @@ int main(void)
     v5.t[1].lock[1].step = 4, v5.t[1].lock[1].param = P_DIST, v5.t[1].lock[1].val = 100;
     v5.sum = proj_hash(&v5, sizeof v5 - 4u);
     memcpy(&buf, &v5, sizeof v5);
-    ok = proj_import(&q2, &buf, (int)sizeof v5) && proj_ok(&q2) && q2.magic == PROJ_MAGIC && q2.sel == 2 && q2.drdly == 55 &&
+    ok = proj_import(&q2, &buf, (int)sizeof v5) && roots_neutral_ok(&q2) && proj_ok(&q2) && q2.magic == PROJ_MAGIC && q2.sel == 2 && q2.drdly == 55 &&
          !memcmp(q2.g, v5.g, sizeof q2.g);
     for (t = 0; t < NTRK; t++) {
         for (i = 0; i < PROJ_NP_V5 - 8u; i++)
@@ -286,12 +298,12 @@ int main(void)
           pt_fill(&q2.t[0], 2) == FC_NORM && pt_fill(&q2.t[TRK_DRUM], 63) == FC_FILL &&
           q2.t[1].lock[0].param == P_E1 && q2.t[1].lock[0].val == 9 && q2.t[1].lock[1].param == P_DIST &&
           q2.t[1].lock[2].step == LOCK_FREE;
-    bad += check("FUN5 -> FUN6: by id, the 2.6 parameters default, nudges and conditions kept, a lock on E2 moved with it", ok);
+    bad += check("FUN5 -> FUN7: by id, the 2.6 parameters default, nudges and conditions kept, a lock on E2 moved with it", ok);
     v5.t[3].micro[0] ^= 1;
     memcpy(&buf, &v5, sizeof v5);
     bad += check("FUN5 with a bad checksum: refused", !proj_import(&q2, &buf, (int)sizeof v5));
 
-    /* a FUN6 round trip: stored as is (nudges, locks, the 2.6 parameters, an engine added since: 8) */
+    /* Build a historical FUN6 fixture byte-for-byte, then verify migration into FUN7. */
     q.t[1].engine = 8;
     q.t[0].step[3].lvl = 0x9C;
     q.t[0].step[3].rat = 0x27;
@@ -302,17 +314,49 @@ int main(void)
     q.t[0].lock[0].step = 3, q.t[0].lock[0].param = P_E0, q.t[0].lock[0].val = 2;
     q.t[0].lock[1].step = 3, q.t[0].lock[1].param = P_DIST, q.t[0].lock[1].val = 100;
     q.t[2].lock[23].step = 63, q.t[2].lock[23].param = P_LEVEL, q.t[2].lock[23].val = 50;
-    q.t[2].p[P_TFLT] = -30;                        /* a track FILTER (2.4) */
+    q.t[2].p[P_TFLT] = -30;
     pt_set(&q.t[1], P_ITYPE, 4), pt_set(&q.t[1], P_IMIX, 90), pt_set(&q.t[TRK_DRUM], P_ITYPE, 2);
     pt_set(&q.t[0], P_LSYNC, 5), pt_set(&q.t[0], P_ESYNC, 1), pt_set(&q.t[0], P_FTYPE, 2);
+    memset(&v6, 0, sizeof v6);
+    v6.magic = PROJ_MAGIC_V6;
+    v6.size = sizeof v6;
+    memcpy(v6.g, q.g, sizeof v6.g);
+    v6.sel = q.sel;
+    v6.drdly = q.drdly;
+    memcpy(v6.rsv, q.rsv, sizeof v6.rsv);
+    memcpy(v6.t, q.t, sizeof v6.t);
+    v6.sum = proj_v6_sum(&v6);
+    memcpy(&buf, &v6, sizeof v6);
+    ok = proj_import(&q2, &buf, (int)sizeof v6) && proj_ok(&q2) &&
+         !memcmp(q.g, q2.g, sizeof q.g) && q.sel == q2.sel && q.drdly == q2.drdly &&
+         !memcmp(q.t, q2.t, sizeof q.t);
+    for (i = 0; i < 4u; i++)
+        ok &= q2.roots_gain[i] == 32768u;
+    ok &= q2.roots_enabled == 0 && q2.roots_rsv[0] == 0 && q2.roots_rsv[1] == 0 && q2.roots_rsv[2] == 0;
+    bad += check("FUN6 -> FUN7: historical tracks/globals preserved, neutral Roots gains and bypass", ok);
+    v6.t[1].step[2].vel ^= 1u;
+    memcpy(&buf, &v6, sizeof v6);
+    bad += check("FUN6 with a bad checksum: refused", !proj_import(&q2, &buf, (int)sizeof v6));
+    v6.t[1].step[2].vel ^= 1u;
+    v6.sum = proj_v6_sum(&v6);
+    memcpy(&buf, &v6, sizeof v6);
+    bad += check("FUN6 with a wrong length: refused", !proj_import(&q2, &buf, (int)sizeof v6 - 2));
+
+    /* FUN7 round trip: four gains and the enable flag are part of the checksum. */
+    q.roots_gain[0] = 32768u, q.roots_gain[1] = 16384u, q.roots_gain[2] = 8192u, q.roots_gain[3] = 0u;
+    q.roots_enabled = 1;
     q.sum = proj_sum(&q);
     memcpy(&buf, &q, sizeof q);
-    bad += check("FUN6 -> FUN6: as stored (levels, ratchets, lanes, nudges, locks, fill conditions, INSERT, SYNC, engine 8)",
-                 proj_import(&q2, &buf, (int)sizeof q) && !memcmp(&q, &q2, sizeof q) && q2.t[1].engine == 8 &&
-                 pt_micro(&q2.t[0], 3) == -32 && pt_fill(&q2.t[0], 3) == FC_FILL && pt_micro(&q2.t[0], 4) == 31 &&
-                 q2.t[0].lock[1].val == 100 && q2.t[2].lock[23].step == 63 && q2.t[2].p[P_TFLT] == -30 &&
-                 pt_get(&q2.t[1], P_ITYPE) == 4 && pt_get(&q2.t[1], P_IMIX) == 90 && pt_get(&q2.t[TRK_DRUM], P_ITYPE) == 2 &&
-                 pt_get(&q2.t[0], P_LSYNC) == 5 && pt_get(&q2.t[0], P_ESYNC) == 1 && pt_get(&q2.t[0], P_FTYPE) == 2);
+    bad += check("FUN7 -> FUN7: settings and historical track data round-trip",
+                 proj_import(&q2, &buf, (int)sizeof q) && !memcmp(&q, &q2, sizeof q));
+    buf.v7.roots_gain[2] ^= 1u;
+    bad += check("FUN7 with a bad Roots checksum: refused", !proj_import(&q2, &buf, (int)sizeof q));
+    q.roots_gain[2] ^= 1u;
+    q.sum = proj_sum(&q);
+    memcpy(&buf, &q, sizeof q);
+    bad += check("FUN7 truncated by one byte: refused", !proj_import(&q2, &buf, (int)sizeof q - 1));
+    bad += check("FUN7 with one trailing byte: refused", !proj_import(&q2, &buf, (int)sizeof q + 1));
+    bad += check("negative project length: refused", !proj_import(&q2, &buf, -1));
 
     /* damaged / wrong size */
     v2.t[1].p[3]++;
@@ -322,11 +366,11 @@ int main(void)
     memcpy(&buf, &v2, sizeof v2);
     bad += check("FUN2 with a wrong length: refused", !proj_import(&q2, &buf, (int)sizeof v2 - 2));
     memcpy(&buf, &q, sizeof q);
-    buf.v4.magic = PROJ_MAGIC_V3;
-    bad += check("FUN6 size with a FUN3 magic: refused", !proj_import(&q2, &buf, (int)sizeof q));
+    buf.v7.magic = PROJ_MAGIC_V3;
+    bad += check("FUN7 size with a FUN3 magic: refused", !proj_import(&q2, &buf, (int)sizeof q));
     memcpy(&buf, &q, sizeof q);
-    buf.v6.magic = PROJ_MAGIC_V5;
-    bad += check("FUN6 size with a FUN5 magic: refused", !proj_import(&q2, &buf, (int)sizeof q));
+    buf.v7.magic = PROJ_MAGIC_V5;
+    bad += check("FUN7 size with a FUN5 magic: refused", !proj_import(&q2, &buf, (int)sizeof q));
     memcpy(&buf, &v3, sizeof v3);
     buf.v3.t[2].step[7].vel ^= 1u;
     bad += check("FUN3 with a bad checksum: refused", !proj_import(&q2, &buf, (int)sizeof v3));
@@ -340,12 +384,12 @@ int main(void)
     fill_v2_track(&v1.t, 0);
     v1.sum = proj_hash(&v1, sizeof v1 - 4u);
     memcpy(&buf, &v1, sizeof v1);
-    ok = proj_import(&q, &buf, (int)sizeof v1) && proj_ok(&q) && track_ok_v2(&q.t[0], &v1.t, 0) && q.g[5] == 705;
+    ok = proj_import(&q, &buf, (int)sizeof v1) && roots_neutral_ok(&q) && proj_ok(&q) && track_ok_v2(&q.t[0], &v1.t, 0) && q.g[5] == 705;
     for (t = 1; t < NTRK; t++)
         ok &= q.t[t].preset == 0xFF && q.t[t].p[P_SLCR] == 0 && q.t[t].p[P_LEVEL] == TP[P_LEVEL].def &&
               pt_get(&q.t[t], P_E0) == ENGINES[trk_def_engine(t)]->edit[0].def && q.t[t].lock[0].step == LOCK_FREE &&
               (t == TRK_DRUM ? dstep_mask(&q.t[t].dstep[0]) == 0u : q.t[t].step[0].time == ST_REST);
-    bad += check("FUN1 -> FUN6: track 1 mapped, tracks 2..4 defaults", ok);
+    bad += check("FUN1 -> FUN7: track 1 mapped, tracks 2..4 defaults", ok);
 
     /* capture / apply: the working project round trip (nudges and locks too) */
     host_tracks_init();
@@ -356,6 +400,8 @@ int main(void)
     dstep_set(&TDRUM->dstep[9], 4, LV_SOFT, 1);
     song.g[G_DUST] = 33;
     song.g[G_DRDLY] = 77;
+    proj_roots_gain[0] = 32768u, proj_roots_gain[1] = 24576u, proj_roots_gain[2] = 16384u, proj_roots_gain[3] = 8192u;
+    proj_roots_enabled = 1;
     trk[1].micro[2] = -20;
     TDRUM->micro[9] = 12;
     lock_set(&trk[1], 2, P_ED_FLT, -30);
@@ -369,6 +415,8 @@ int main(void)
     proj_capture(&q);
     host_tracks_init();
     song.g[G_DRDLY] = 0;
+    memset(proj_roots_gain, 0, sizeof proj_roots_gain);
+    proj_roots_enabled = 0;
     proj_apply(&q, 1);
     ok = q.drdly == 77 && song.g[G_DRDLY] == 77 && trk[2].p[P_SLEN] == 7 && trk[1].step[2].n == 2 && trk[1].step[2].lvl == 0x0D && song.g[G_DUST] == 33 &&
          dstep_has(&TDRUM->dstep[9], 4) && dstep_lvl(&TDRUM->dstep[9], 4) == LV_SOFT && dstep_rat(&TDRUM->dstep[9], 4) == 1u &&
@@ -379,7 +427,8 @@ int main(void)
          step_fill(TDRUM, 63) == FC_FILL && step_fill(TDRUM, 8) == FC_NORM &&
          trk[2].p[P_ITYPE] == 7 && trk[2].p[P_IA] == 11 && trk[2].p[P_IMIX] == 77 && TDRUM->p[P_ITYPE] == 4 &&
          trk[0].p[P_LSYNC] == 6 && trk[0].p[P_LTRIG] == 1 && trk[0].p[P_LPOL] == 1 && trk[0].p[P_ESYNC] == 1 &&
-         trk[0].p[P_FTYPE] == 1;
+         trk[0].p[P_FTYPE] == 1 && proj_roots_gain[0] == 32768u && proj_roots_gain[1] == 24576u &&
+         proj_roots_gain[2] == 16384u && proj_roots_gain[3] == 8192u && proj_roots_enabled == 1;
     bad += check("the working project: capture -> apply round trip (levels, lanes, DUST, drum DLY, nudges, locks, fill conditions, the 2.6 parameters)", ok);
     q2 = q;
     q2.drdly = 0;                                  /* a 2.4 project: the byte was 0 */
@@ -448,7 +497,7 @@ int main(void)
         memset(drum_tune, 0, sizeof drum_tune), memset(drum_dec, 0, sizeof drum_dec);
         bad += check("2.7 drum SOUND page: TUNE and DECAY of the 16 sounds kept in a project and a section; an older one: none", ok);
     }
-    {   /* what format 6 packs in fewer bits holds every value: the byte parameters (P_ITYPE .. P_LPOL: 0..255), TEXTURE's
+    {   /* what FUN6's compact parameter encoding holds in fewer bits: the byte parameters (P_ITYPE .. P_LPOL: 0..255), TEXTURE's
          * SRC (4 bits), WHEN and DUCK (1), RATE (a byte), LEVEL and TONE + 64 (7 bits each) */
         uint32_t k;
         int ok = 1;
@@ -478,6 +527,15 @@ int main(void)
     q2 = q;
     bad += check("2.6 SAVE > PROJECT > ERASE: an object of no bytes is no project (an empty slot, older SLOOP too)",
                  !proj_import(&q2, &q, 0));
+    {   /* ROOTS DUB SysEx bridge: 7-bit editor values <-> Q15 FUN7 runtime. */
+        uint8_t in[4] = {0u, 32u, 96u, 255u}, out[4], enabled;
+        proj_roots_set(2u, in);                    /* enabled is a normalized boolean; gain 255 clamps to 127 */
+        proj_roots_get(&enabled, out);
+        ok = enabled == 1u && out[0] == 0u && out[1] == 32u && out[2] == 96u && out[3] == 127u &&
+             proj_roots_gain[0] == 0u && proj_roots_gain[3] == 32768u;
+        bad += check("ROOTS DUB editor bridge: Q15/7-bit conversion, unity, mute, clamping and enabled normalization", ok);
+        proj_roots_set(0u, (const uint8_t[]){127u, 127u, 127u, 127u});
+    }
     printf("%s\n", bad ? "PROJECT FORMAT TEST FAILED" : "project format test passed");
     return bad != 0;
 }

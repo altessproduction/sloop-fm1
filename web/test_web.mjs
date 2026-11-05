@@ -26,6 +26,23 @@ const PYTHON = process.env.PYTHON || (process.platform === "win32" ? "python" : 
 const py = (code, ...args) => execFileSync(PYTHON, ["-c", code, ...args], { maxBuffer: 1 << 26 });
 const HERE = fileURLToPath(new URL(".", import.meta.url));
 
+/* --------------------------------------------------------- ROOTS DUB audio lab --- */
+{
+  const lab = readFileSync(join(HERE, "roots-dub-lab.html"), "utf8");
+  const script = lab.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+  ok(!!script, "ROOTS DUB lab: inline audio script exists");
+  if (script) {
+    try { new vm.Script(script); ok(true, "ROOTS DUB lab: JavaScript syntax"); }
+    catch (e) { ok(false, `ROOTS DUB lab: JavaScript syntax (${e.message})`); }
+  }
+  ok((lab.match(/makeAP\(ctx,350\)/g) || []).length === 1
+    && (lab.match(/makeAP\(ctx,2500\)/g) || []).length === 2
+    && lab.includes("subAP350,subAP2500")
+    && lab.includes("bassAP2500")
+    && lab.includes("function makeAP(ctx,freq)"),
+    "ROOTS DUB lab: one phase-compensation all-pass per later crossover");
+}
+
 /* ------------------------------------------------------------ editor protocol --- */
 const html = readFileSync(join(HERE, "editor.html"), "utf8");
 const proto = html.slice(html.indexOf("/*PROTO-BEGIN*/"), html.indexOf("/*PROTO-END*/"));
@@ -143,6 +160,20 @@ function attachMock(opt, linkOpt = {}) {
   return { m, link, rq, sent, ev, done: () => { link.close(); m.stop(); } };
 }
 const emptyStep = { n: 0, notes: [0, 0, 0, 0], time: 2, flags: 0, vel: 0 };
+
+async function editorRoots() {
+  const m = E.makeMockDevice({ roots: true });
+  const inp = [...m.access.inputs.values()][0], out = [...m.access.outputs.values()][0];
+  const link = new E.Link((d) => out.send(d), { timeout: 300 });
+  inp.onmidimessage = (e) => link.receive(e.data);
+  const info = E.parse[E.CMD.INFO](await link.request(E.req.info()));
+  ok(info.proto === 13 && E.CMD.ROOTS_GET === 78 && E.CMD.ROOTS_SET === 79, "ROOTS DUB: protocol v13 and command IDs");
+  let state = E.parse[E.CMD.ROOTS_GET](await link.request(E.req.rootsGet()));
+  ok(!state.enabled && state.gains.join(",") === "127,127,127,127", "ROOTS DUB: mock returns neutral four-band gains");
+  state = E.parse[E.CMD.ROOTS_SET](await link.request(E.req.rootsSet(true, [0, 32, 96, 127])));
+  ok(state.enabled && state.gains.join(",") === "0,32,96,127", "ROOTS DUB: SET round-trip clamps and returns four gains");
+  link.close();
+}
 
 async function editorLibrarian() {
   const { m, rq, done } = attachMock({});
@@ -1777,6 +1808,7 @@ async function updater() {
 }
 
 await editorMock();
+await editorRoots();
 await editorLibrarian();
 await editorLive();
 await editorTracks();

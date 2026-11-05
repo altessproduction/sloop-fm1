@@ -6,10 +6,10 @@
  * the transport is stopped and nothing sounds) and comes back at power-on: SLOOP starts where you
  * left it.
  *
- * Formats: 6 ("FUN6", written, SLOOP 2.6): format 5 with the ten parameters of 2.6 (P_ITYPE .. P_LPOL, just
- * before P_E0: the INSERT, the ANALOG filter TYPE, ENV SYNC, LFO 2) in a byte each, and each step's nudge (6 bits)
- * and fill condition (2 bits) in one byte: format 5 was full (3840 bytes, one flash object), this is 3816.
- * Read and converted: 5 ("FUN5", SLOOP 2.4 .. 2.5: format 4 plus, per track, the nudge of each step (micro), NLOCK
+ * Formats: 7 ("FUN7", written): FUN6 plus twelve bytes for four Q15 Roots Dub gains, enable and reserved bytes.
+ * Format 6 ("FUN6", SLOOP 2.6) is retained byte-for-byte as a read-only layout: format 5 with the ten parameters
+ * of 2.6 (P_ITYPE .. P_LPOL) in a byte each, and each step's nudge and fill condition in one byte (3816 bytes).
+ * Read and converted: 6, 5 ("FUN5", SLOOP 2.4 .. 2.5: format 4 plus, per track, the nudge of each step (micro), NLOCK
  * parameter locks, the steps' fill conditions (2 bits each) and P_TFLT, one parameter more just before P_E0;
  * converted by id, the 2.6 parameters at their defaults, a lock on P_E0.. moved with it), 4 ("FUN4", SLOOP 2.0 .. 2.3: PROJ_NP_V4 parameters, today's G_COUNT, 10-byte
  * steps with levels and ratchets, the drum track's 16 lanes; no nudge, no lock), 3 ("FUN3", SLOOP 1.x: 8-byte
@@ -24,7 +24,8 @@
 #ifndef UI_SMALL                 /* (2.7) compiled for size: not the audio path (gfx.c UI_SMALL); the host tests: nothing */
 #define UI_SMALL
 #endif
-#define PROJ_MAGIC 0x46554E36u                 /* "FUN6": format 5 + the 2.6 parameters, nudge and condition in a byte */
+#define PROJ_MAGIC 0x46554E37u                 /* "FUN7": FUN6 + persistent Roots Dub isolator settings */
+#define PROJ_MAGIC_V6 0x46554E36u              /* "FUN6": format 5 + 2.6 parameters, nudges and conditions */
 #define PROJ_MAGIC_V5 0x46554E35u              /* "FUN5": format 4 + per-step nudge, parameter locks, fill conditions (SLOOP 2.4) */
 #define PROJ_MAGIC_V4 0x46554E34u              /* "FUN4": four tracks, P_COUNT parameters each, 10-byte steps; read only */
 #define PROJ_MAGIC_V3 0x46554E33u              /* "FUN3": SLOOP 1.x; read only */
@@ -36,7 +37,7 @@
 #define PROJ_NG_V3 27u                         /* G_COUNT of formats 1..3 */
 #define PROJ_NP_V2 53u                         /* P_COUNT of formats 1 and 2 (P_E0 was 45) */
 #define PROJ_NG_V2 27u                         /* G_COUNT of formats 1 and 2 */
-#define PROJ_NG 32u                            /* the globals of formats 4 and 5 (G_COUNT until 2.4). SLOOP 2.5's
+#define PROJ_NG 32u                            /* the globals retained by formats 4..7 (G_COUNT until 2.4). SLOOP 2.5's
                                                 * G_DRDLY rides in the byte after sel (0 in older projects: off),
                                                 * so the format and its size do not change */
 _Static_assert(G_DRDLY == PROJ_NG && G_TXSRC == PROJ_NG + 5u,
@@ -57,10 +58,19 @@ typedef struct {                               /* one track; the drum track igno
     uint8_t mf[NSTEP];                         /* each step's nudge (core.h MICRO_*, 6 bits) | its fill condition << 6 */
     plock_t lock[NLOCK];                       /* and its parameter locks (step LOCK_FREE = none) */
 } proj_trk_t;
-typedef struct {
+typedef struct {                               /* FUN6: immutable historical layout */
     uint32_t magic, size;
     int16_t g[PROJ_NG];
-    uint8_t sel, drdly, rsv[2];                /* the selected track; 2.5: G_DRDLY */
+    uint8_t sel, drdly, rsv[2];
+    proj_trk_t t[NTRK];
+    uint32_t sum;
+} project_v6_t;
+typedef struct {                               /* FUN7: current format */
+    uint32_t magic, size;
+    int16_t g[PROJ_NG];
+    uint8_t sel, drdly, rsv[2];
+    uint16_t roots_gain[4];                    /* Q15, 32768 = unity */
+    uint8_t roots_enabled, roots_rsv[3];
     proj_trk_t t[NTRK];
     uint32_t sum;
 } project_t;
@@ -149,7 +159,8 @@ typedef struct {                               /* format 1 (until 0.5 beta), rea
 } project_v1_t;
 _Static_assert(sizeof(project_v2_t) == 2552u && sizeof(project_v1_t) == 688u && sizeof(project_v3_t) == 2584u &&
                sizeof(project_v4_t) == 3112u && sizeof(project_v5_t) == 3840u, "formats 1 / 2 / 3 / 4 / 5 as they were stored");
-_Static_assert(sizeof(project_t) <= 3840u, "format 6 fits one flash object (storage.c ST_PAYLOAD_MAX)");
+_Static_assert(sizeof(project_v6_t) == 3816u, "FUN6 binary layout must remain immutable");
+_Static_assert(sizeof(project_t) == 3828u && sizeof(project_t) <= 3840u, "FUN7 fits one flash object (storage.c ST_PAYLOAD_MAX)");
 project_t proj_slot[4] __attribute__((section(".noinit")));
 
 UI_SMALL static uint32_t proj_hash(const void *p, uint32_t n)   /* FNV-1a over n bytes */
@@ -161,9 +172,44 @@ UI_SMALL static uint32_t proj_hash(const void *p, uint32_t n)   /* FNV-1a over n
     return s;
 }
 UI_SMALL static uint32_t proj_sum(const project_t *p) { return proj_hash(p, sizeof *p - 4u); }
+UI_SMALL static uint32_t proj_v6_sum(const project_v6_t *p) { return proj_hash(p, sizeof *p - 4u); }
 UI_SMALL static int proj_ok(const project_t *q) { return q->magic == PROJ_MAGIC && q->size == sizeof *q && q->sum == proj_sum(q); }
+UI_SMALL static int proj_v6_ok(const project_v6_t *q)
+{
+    return q->magic == PROJ_MAGIC_V6 && q->size == sizeof *q && q->sum == proj_v6_sum(q);
+}
+static uint16_t proj_roots_gain[4] = {32768u, 32768u, 32768u, 32768u};
+static uint8_t proj_roots_enabled;
 
-/* ---- old formats -> format 5 */
+/* Narrow editor-facing API: gains are 7-bit on SysEx, Q15 in FUN7.
+ * Caller masks IRQs around writes because the audio path may consume them.
+ */
+UI_SMALL static void proj_roots_get(uint8_t *enabled, uint8_t gain[4])
+{
+    uint32_t i;
+    *enabled = (uint8_t)(proj_roots_enabled != 0u);
+    for (i = 0; i < 4u; i++)
+        gain[i] = (uint8_t)(((uint32_t)proj_roots_gain[i] * 127u + 16384u) / 32768u);
+}
+UI_SMALL static void proj_roots_set(uint8_t enabled, const uint8_t gain[4])
+{
+    uint32_t i;
+    proj_roots_enabled = (uint8_t)(enabled != 0u);
+    for (i = 0; i < 4u; i++) {
+        uint32_t v = gain[i] > 127u ? 127u : gain[i];
+        proj_roots_gain[i] = (uint16_t)((v * 32768u + 63u) / 127u);
+    }
+}
+UI_SMALL static void proj_roots_neutral(project_t *p)
+{
+    uint32_t i;
+    for (i = 0; i < 4u; i++)
+        p->roots_gain[i] = 32768u;
+    p->roots_enabled = 0;
+    memset(p->roots_rsv, 0, sizeof p->roots_rsv);
+}
+
+/* ---- old formats -> current format */
 /* an old step into a synth step (no level, no ratchet) */
 UI_SMALL static void step_from8(step_t *d, const step8_t *s)
 {
@@ -376,16 +422,42 @@ UI_SMALL static int proj_from_v1(project_t *q, const project_v1_t *v1, int n)
     return 1;
 }
 
-/* n bytes of a stored project (any format) -> slot q as format 5; 0 = not a project */
+/* FUN6 -> FUN7: preserve the historical bytes and add neutral Roots Dub settings. */
+UI_SMALL static int proj_from_v6(project_t *q, const project_v6_t *v6, int n)
+{
+    if (n != (int)sizeof *v6 || !proj_v6_ok(v6))
+        return 0;
+    memset(q, 0, sizeof *q);
+    q->magic = PROJ_MAGIC;
+    q->size = sizeof *q;
+    memcpy(q->g, v6->g, sizeof q->g);
+    q->sel = v6->sel;
+    q->drdly = v6->drdly;
+    memcpy(q->rsv, v6->rsv, sizeof q->rsv);
+    proj_roots_neutral(q);
+    memcpy(q->t, v6->t, sizeof q->t);
+    q->sum = proj_sum(q);
+    return 1;
+}
+
+/* n bytes of a stored project (any format) -> current FUN7 slot; 0 = not a project */
 UI_SMALL static int proj_import(project_t *q, const void *b, int n)
 {
+    int ok;
     if (n == (int)sizeof *q && proj_ok((const project_t *)b)) {
         memcpy(q, b, sizeof *q);
         return 1;
     }
-    return proj_from_v5(q, (const project_v5_t *)b, n) || proj_from_v4(q, (const project_v4_t *)b, n) ||
-           proj_from_v3(q, (const project_v3_t *)b, n) ||
-           proj_from_v2(q, (const project_v2_t *)b, n) || proj_from_v1(q, (const project_v1_t *)b, n);
+    if (proj_from_v6(q, (const project_v6_t *)b, n))
+        return 1;
+    ok = proj_from_v5(q, (const project_v5_t *)b, n) || proj_from_v4(q, (const project_v4_t *)b, n) ||
+         proj_from_v3(q, (const project_v3_t *)b, n) || proj_from_v2(q, (const project_v2_t *)b, n) ||
+         proj_from_v1(q, (const project_v1_t *)b, n);
+    if (ok) {
+        proj_roots_neutral(q);
+        q->sum = proj_sum(q);
+    }
+    return ok;
 }
 
 /* ---- the working project <-> a project_t */
@@ -463,6 +535,9 @@ UI_SMALL static void proj_capture(project_t *p)        /* what is playing now, a
     memset(p, 0, sizeof *p);
     p->magic = PROJ_MAGIC;
     p->size = sizeof *p;
+    for (i = 0; i < 4u; i++)
+        p->roots_gain[i] = proj_roots_gain[i];
+    p->roots_enabled = proj_roots_enabled;
     for (i = 0; i < PROJ_NG; i++)
         p->g[i] = song.g[i];
     p->sel = song.sel;
@@ -498,6 +573,9 @@ static void proj_apply(const project_t *p, int all)
     song.g[G_DRDLY] = (int16_t)clamp(p->drdly, GP[G_DRDLY].min, GP[G_DRDLY].max);   /* (a load and a section, as REV) */
     proj_tx_get(p);                                     /* GLO > TEXTURE (2.6): a load and a section */
     drum_tw_get(p);                                     /* (2.7) the drum sounds' TUNE and DECAY: a load and a section */
+    for (i = 0; i < 4u; i++)
+        proj_roots_gain[i] = p->roots_gain[i] > 32768u ? 32768u : p->roots_gain[i];
+    proj_roots_enabled = (uint8_t)(p->roots_enabled != 0u);
     for (k = 0; k < NTRK; k++) {
         track_t *t = &trk[k];
         const proj_trk_t *s = &p->t[k];
@@ -559,9 +637,10 @@ static void proj_apply(const project_t *p, int all)
 #endif
 static uint8_t sec_dirty, song_dirty;           /* live sections / the song: in RAM, not yet in flash */
 #if FELUCCA_FLASH
-/* slot from flash into RAM (format 5, or an old one converted) */
+/* slot from flash into RAM (FUN1..FUN6, or current FUN7) */
 static union {
-    project_t v6;
+    project_t v7;
+    project_v6_t v6;
     project_v5_t v5;
     project_v4_t v4;
     project_v3_t v3;
@@ -853,7 +932,7 @@ UI_SMALL static void persist_boot(void)                    /* before settings_in
                 proj_fetch(i);
             } else {
                 int n = st_load(OBJ_PROJECT0 + i, &proj_tmp, sizeof proj_tmp);
-                if (n != (int)sizeof proj_slot[i] || memcmp(&proj_tmp.v6, &proj_slot[i], sizeof proj_slot[i]))
+                if (n != (int)sizeof proj_slot[i] || memcmp(&proj_tmp.v7, &proj_slot[i], sizeof proj_slot[i]))
                     sec_dirty |= (uint8_t)(1u << i);
             }
     }
