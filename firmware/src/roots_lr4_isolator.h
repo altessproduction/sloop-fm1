@@ -16,7 +16,7 @@ typedef struct {
 
 typedef struct {
     roots_lr4_biquad_state_t lp[3][2], hp[3][2];
-    roots_lr4_biquad_state_t allpass[3][2]; /* SUB@350, SUB@2500, BASS@2500 */
+    roots_lr4_biquad_state_t allpass[3]; /* SUB@350, SUB@2500, BASS@2500 */
     int32_t gain[4]; /* Q15, unity = 32768 */
     uint16_t wet; /* Q15 dry/wet transition, 64-sample ramp */
     uint8_t enabled, running;
@@ -61,12 +61,11 @@ static const roots_lr4_coeff_t roots_lr4_ap_coeff[3] = {
     {648969343,-1614580579,1073741824,-1614580579,648969343}
 };
 
-/* LR4 all-pass = two identical second-order all-pass sections. */
+/* Sum of a fourth-order Linkwitz-Riley LP/HP pair is one second-order all-pass. */
 static inline int32_t roots_lr4_allpass(int32_t x,
-        roots_lr4_biquad_state_t state[2], const roots_lr4_coeff_t *c)
+        roots_lr4_biquad_state_t *state, const roots_lr4_coeff_t *c)
 {
-    x=roots_lr4_biquad(x,&state[0],c);
-    return roots_lr4_biquad(x,&state[1],c);
+    return roots_lr4_biquad(x,state,c);
 }
 
 static inline void roots_lr4_init(roots_lr4_t *s)
