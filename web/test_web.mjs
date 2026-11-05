@@ -160,6 +160,20 @@ function attachMock(opt, linkOpt = {}) {
 }
 const emptyStep = { n: 0, notes: [0, 0, 0, 0], time: 2, flags: 0, vel: 0 };
 
+async function editorRoots() {
+  const m = E.makeMockDevice({ roots: true });
+  const inp = [...m.access.inputs.values()][0], out = [...m.access.outputs.values()][0];
+  const link = new E.Link((d) => out.send(d), { timeout: 300 });
+  inp.onmidimessage = (e) => link.receive(e.data);
+  const info = E.parse[E.CMD.INFO](await link.request(E.req.info()));
+  ok(info.proto === 13 && E.CMD.ROOTS_GET === 78 && E.CMD.ROOTS_SET === 79, "ROOTS DUB: protocol v13 and command IDs");
+  let state = E.parse[E.CMD.ROOTS_GET](await link.request(E.req.rootsGet()));
+  ok(!state.enabled && state.gains.join(",") === "127,127,127,127", "ROOTS DUB: mock returns neutral four-band gains");
+  state = E.parse[E.CMD.ROOTS_SET](await link.request(E.req.rootsSet(true, [0, 32, 96, 127])));
+  ok(state.enabled && state.gains.join(",") === "0,32,96,127", "ROOTS DUB: SET round-trip clamps and returns four gains");
+  link.close();
+}
+
 async function editorLibrarian() {
   const { m, rq, done } = attachMock({});
   const C = E.CMD;
@@ -1793,6 +1807,7 @@ async function updater() {
 }
 
 await editorMock();
+await editorRoots();
 await editorLibrarian();
 await editorLive();
 await editorTracks();
