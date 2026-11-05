@@ -7,6 +7,8 @@ protocol v3; commands 31-32 (any track's parameters) form protocol v4; command 3
 (SLOOP 2.3); commands 37-40 (the steps' nudges and parameter locks) form protocol v7, commands 41-42 (the
 steps' fill conditions) protocol v8 and commands 68-71 (the FM6 engine's patches) protocol v9 (all SLOOP 2.4).
 
+**v13 ROOTS DUB:** INFO reports protocol version 13. Commands 78 and 79 access the project-scoped four-band isolator settings in FUN7. Older command IDs and layouts are unchanged.
+
 **v3 (four tracks):** the device has four tracks: 1..3 are synth parts, 4 is the drum track. One
 of them is *selected* (the TRACKS page on the device, or `TRACK`). Every v1 / v2 command acts on the
 selected track (its parameters, engine, preset, steps, the user presets it stores or loads); `TRACK`,
