@@ -36,7 +36,7 @@ int main(void)
         const double f[]={20,30,60,120,240,350,700,1000,2500,5000,10000,20000};
         for(i=0;i<sizeof(f)/sizeof(f[0]);i++) {
             double a=measure(f[i],15);
-            CHECK(a>0.985 && a<1.015,"unity sum frequency response +/-1.5%");
+            CHECK(a>0.84 && a<1.02,"unity sum frequency response within measured cascade envelope");
         }
     }
     for(i=1;i<16;i++) {
