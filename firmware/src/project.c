@@ -6,10 +6,10 @@
  * the transport is stopped and nothing sounds) and comes back at power-on: SLOOP starts where you
  * left it.
  *
- * Formats: 6 ("FUN6", written, SLOOP 2.6): format 5 with the ten parameters of 2.6 (P_ITYPE .. P_LPOL, just
- * before P_E0: the INSERT, the ANALOG filter TYPE, ENV SYNC, LFO 2) in a byte each, and each step's nudge (6 bits)
- * and fill condition (2 bits) in one byte: format 5 was full (3840 bytes, one flash object), this is 3816.
- * Read and converted: 5 ("FUN5", SLOOP 2.4 .. 2.5: format 4 plus, per track, the nudge of each step (micro), NLOCK
+ * Formats: 7 ("FUN7", written): FUN6 plus twelve bytes for four Q15 Roots Dub gains, enable and reserved bytes.
+ * Format 6 ("FUN6", SLOOP 2.6) is retained byte-for-byte as a read-only layout: format 5 with the ten parameters
+ * of 2.6 (P_ITYPE .. P_LPOL) in a byte each, and each step's nudge and fill condition in one byte (3816 bytes).
+ * Read and converted: 6, 5 ("FUN5", SLOOP 2.4 .. 2.5: format 4 plus, per track, the nudge of each step (micro), NLOCK
  * parameter locks, the steps' fill conditions (2 bits each) and P_TFLT, one parameter more just before P_E0;
  * converted by id, the 2.6 parameters at their defaults, a lock on P_E0.. moved with it), 4 ("FUN4", SLOOP 2.0 .. 2.3: PROJ_NP_V4 parameters, today's G_COUNT, 10-byte
  * steps with levels and ratchets, the drum track's 16 lanes; no nudge, no lock), 3 ("FUN3", SLOOP 1.x: 8-byte
@@ -189,7 +189,7 @@ UI_SMALL static void proj_roots_neutral(project_t *p)
     memset(p->roots_rsv, 0, sizeof p->roots_rsv);
 }
 
-/* ---- old formats -> format 5 */
+/* ---- old formats -> current format */
 /* an old step into a synth step (no level, no ratchet) */
 UI_SMALL static void step_from8(step_t *d, const step8_t *s)
 {
@@ -617,7 +617,7 @@ static void proj_apply(const project_t *p, int all)
 #endif
 static uint8_t sec_dirty, song_dirty;           /* live sections / the song: in RAM, not yet in flash */
 #if FELUCCA_FLASH
-/* slot from flash into RAM (format 5, or an old one converted) */
+/* slot from flash into RAM (FUN1..FUN6, or current FUN7) */
 static union {
     project_t v7;
     project_v6_t v6;
