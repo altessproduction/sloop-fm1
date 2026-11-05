@@ -1,13 +1,13 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* Host test of the project formats (firmware/src/project.c, -DPROJ_HOST part). Format 6 ("FUN6",
- * SLOOP 2.6: format 5 + the ten 2.6 parameters) is written; format 5 ("FUN4", SLOOP 2.0:
- * 10-byte steps with levels and ratchets, the drum track's 16 lanes, P_CHORD), format 3 ("FUN3", SLOOP
- * 1.x), format 2 ("FUN2", 53 parameters per track) and format 1 ("FUN1"), built byte for byte as the
- * firmware stored them, convert: every old value at its parameter, the parameters added since at their
- * defaults, the swings onto the MPC scale (x 0.8), synth steps as they were, the drum track's notes onto
- * its lanes (accent: hard), globals, selection, the engine bytes (kept; the drum track's 0), no nudge, no
- * lock, no fill condition; damaged ones are refused. Run by tests/run_tests.sh (needs build/gen). */
+ * SLOOP 2.6: format 5 + the ten 2.6 parameters) is written; formats 5 ("FUN5", SLOOP 2.4:
+ * nudges, parameter locks and fill conditions), 4 ("FUN4", SLOOP 2.0: 10-byte steps with levels and
+ * ratchets, the drum track's 16 lanes, P_CHORD), 3 ("FUN3", SLOOP 1.x), 2 ("FUN2", 53 parameters per
+ * track) and 1 ("FUN1") are built byte for byte as the firmware stored them and converted: every old
+ * value at its parameter, new parameters at defaults, swings onto the MPC scale (x 0.8), synth steps as
+ * they were, drum notes onto lanes (accent: hard), globals, selection and engine bytes; no nudge, lock or
+ * fill condition where absent. Damaged files are refused. Run by tests/run_tests.sh (needs build/gen). */
 #define main hostsim_main
 #include <stddef.h>
 #include "hostsim.c"
