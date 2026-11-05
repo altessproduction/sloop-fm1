@@ -63,7 +63,7 @@ int main(void)
         }
     }
     roots_lr4_init(&s); s.enabled=1;
-    for(i=0;i<100000;i++){x=(i&1)?131071:-131071;y=roots_lr4_process(&s,x);
+    for(i=0;i<100000;i++){x=(i&1)?ROOTS_LR4_MAX:-ROOTS_LR4_MAX;y=roots_lr4_process(&s,x);
         CHECK(y<=ROOTS_LR4_MAX && y>=-ROOTS_LR4_MAX,"full scale bounded");}
     puts("ROOTS DUB LR4: bypass, mute, DC, response, 15 masks and stress OK");
     return 0;
