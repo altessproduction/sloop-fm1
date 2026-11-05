@@ -15,7 +15,7 @@ typedef struct {
 } roots_lr4_biquad_state_t;
 
 typedef struct {
-    roots_lr4_biquad_state_t lp[2], hp[2];
+    roots_lr4_biquad_state_t lp[3][2], hp[3][2];
     roots_lr4_biquad_state_t allpass[3][2]; /* SUB@350, SUB@2500, BASS@2500 */
     int32_t gain[4]; /* Q15, unity = 32768 */
     uint8_t enabled;
