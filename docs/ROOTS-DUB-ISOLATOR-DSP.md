@@ -108,3 +108,23 @@ réponse mesurée.
 
 Cette conception est une spécification de travail, pas encore une
 implémentation validée. Le prototype actuel reste séparé du bus maître.
+
+
+## Prototype LR4 à coefficients fixes (non intégré)
+
+Un second module expérimental, `firmware/src/roots_lr4_isolator.h`, met en
+œuvre les trois séparateurs avec des biquads Butterworth en Q30 et une forme
+directe I à accumulateur 64 bits. Il fournit deux sections passe-bas et deux
+passe-haut par séparateur, un état indépendant par canal, des gains Q15 et un
+bypass exact. Le test associé est `tests/roots_lr4_isolator_test.c`.
+
+**Réserve importante découverte pendant le calcul de la cascade :** même si
+chaque séparateur LR4 isolé est complémentaire en amplitude, la cascade
+successive donne aux bandes BASS et MIDS une phase supplémentaire due aux
+séparateurs situés plus haut. La somme des quatre bandes n'est donc pas plate
+à ±0,1 dB sur toute la plage. Le test du prototype vérifie une enveloppe
+large (environ -1,5 dB à +0,2 dB sur les fréquences échantillonnées), pas une
+spécification de produit. Une compensation de phase/all-pass ou une autre
+topologie multibande est nécessaire avant toute intégration au master bus.
+Les mesures restent des tests logiciels à 44,1 kHz, pas des mesures sur le
+FM-1 physique.
