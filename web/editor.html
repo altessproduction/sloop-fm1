@@ -6089,7 +6089,7 @@ function rootsCommit() {
     d.roots = r;
     names.forEach((name, i) => { $("roots-" + name).value = r.gains[i]; $("roots-" + name + "-v").textContent = r.gains[i]; });
     $("roots-enabled").checked = r.enabled;
-    $("roots-status").textContent = "Réglages enregistrés dans le projet (FUN7).";
+    $("roots-status").textContent = "Valeurs appliquées ; conservées à la sauvegarde du projet FUN7.";
   }).catch((e) => { if (dev === d) $("roots-status").textContent = "Erreur de communication : " + e.message; });
 }
 async function getDump() { lastDump = Date.now(); return parse[CMD.DUMP](await rq(req.dump()), dev.info); }
