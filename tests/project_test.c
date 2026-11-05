@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
-/* Host test of the project formats (firmware/src/project.c, -DPROJ_HOST part). Format 6 ("FUN6",
- * SLOOP 2.6: format 5 + the ten 2.6 parameters) is written; formats 5 ("FUN5", SLOOP 2.4:
+/* Host test of the project formats (firmware/src/project.c, -DPROJ_HOST part). Format 7 ("FUN7",
+ * Roots Dub settings) is written; format 6 ("FUN6") is imported unchanged, formats 5 ("FUN5", SLOOP 2.4:
  * nudges, parameter locks and fill conditions), 4 ("FUN4", SLOOP 2.0: 10-byte steps with levels and
  * ratchets, the drum track's 16 lanes, P_CHORD), 3 ("FUN3", SLOOP 1.x), 2 ("FUN2", 53 parameters per
  * track) and 1 ("FUN1") are built byte for byte as the firmware stored them and converted: every old
@@ -115,9 +115,11 @@ int main(void)
     static project_v1_t v1;
     static project_v4_t v4;
     static project_t q, q2;
+    static project_v6_t v6;
     static project_v5_t v5;
     static union {
-        project_t v6;
+        project_t v7;
+        project_v6_t v6;
         project_v5_t v5;
         project_v4_t v4;
         project_v3_t v3;
@@ -131,8 +133,9 @@ int main(void)
                  P_CHORD + 1 == P_TFLT && P_TFLT + 1 == P_STRUM && P_STRUM + 1 == P_VLEAD && P_VLEAD + 1 == P_ITYPE &&
                  P_LPOL + 1 == P_E0 && P_E0 == 63 && P_COUNT == PROJ_NP_V5 + 10u && PROJ_NP_V5 == PROJ_NP_V4 + 3u &&
                  PROJ_NP_V4 == PROJ_NP_V3 + 1u && P_SLDEPTH + 1 == P_CHORD);
-    bad += check("format 6 fits one flash object (3816 of 3840 bytes); 4 slots fit .noinit (with panel, settings, dbg, bootguard)",
-                 sizeof(project_t) <= 3840u && 4u * sizeof(project_t) <= 0x3D50u - 256u && sizeof(project_t) == 3816u);
+    bad += check("FUN6 remains 3816 bytes; FUN7 is 3828 bytes and four slots fit .noinit and flash",
+                 sizeof(project_v6_t) == 3816u && sizeof(project_t) == 3828u && sizeof(project_t) <= 3840u &&
+                 4u * sizeof(project_t) <= 0x3D50u - 256u);
     {   /* every 2.6 parameter's range fits its byte */
         uint32_t k, fits = 1;
         for (k = P_ITYPE; k < P_E0; k++) fits &= TP[k].min >= 0 && TP[k].max <= 255;
@@ -291,7 +294,7 @@ int main(void)
     memcpy(&buf, &v5, sizeof v5);
     bad += check("FUN5 with a bad checksum: refused", !proj_import(&q2, &buf, (int)sizeof v5));
 
-    /* a FUN6 round trip: stored as is (nudges, locks, the 2.6 parameters, an engine added since: 8) */
+    /* Build a historical FUN6 fixture byte-for-byte, then verify migration into FUN7. */
     q.t[1].engine = 8;
     q.t[0].step[3].lvl = 0x9C;
     q.t[0].step[3].rat = 0x27;
@@ -302,17 +305,45 @@ int main(void)
     q.t[0].lock[0].step = 3, q.t[0].lock[0].param = P_E0, q.t[0].lock[0].val = 2;
     q.t[0].lock[1].step = 3, q.t[0].lock[1].param = P_DIST, q.t[0].lock[1].val = 100;
     q.t[2].lock[23].step = 63, q.t[2].lock[23].param = P_LEVEL, q.t[2].lock[23].val = 50;
-    q.t[2].p[P_TFLT] = -30;                        /* a track FILTER (2.4) */
+    q.t[2].p[P_TFLT] = -30;
     pt_set(&q.t[1], P_ITYPE, 4), pt_set(&q.t[1], P_IMIX, 90), pt_set(&q.t[TRK_DRUM], P_ITYPE, 2);
     pt_set(&q.t[0], P_LSYNC, 5), pt_set(&q.t[0], P_ESYNC, 1), pt_set(&q.t[0], P_FTYPE, 2);
+    memset(&v6, 0, sizeof v6);
+    v6.magic = PROJ_MAGIC_V6;
+    v6.size = sizeof v6;
+    memcpy(v6.g, q.g, sizeof v6.g);
+    v6.sel = q.sel;
+    v6.drdly = q.drdly;
+    memcpy(v6.rsv, q.rsv, sizeof v6.rsv);
+    memcpy(v6.t, q.t, sizeof v6.t);
+    v6.sum = proj_v6_sum(&v6);
+    memcpy(&buf, &v6, sizeof v6);
+    ok = proj_import(&q2, &buf, (int)sizeof v6) && proj_ok(&q2) &&
+         !memcmp(q.g, q2.g, sizeof q.g) && q.sel == q2.sel && q.drdly == q2.drdly &&
+         !memcmp(q.t, q2.t, sizeof q.t);
+    for (i = 0; i < 4u; i++)
+        ok &= q2.roots_gain[i] == 32768u;
+    ok &= q2.roots_enabled == 0 && q2.roots_rsv[0] == 0 && q2.roots_rsv[1] == 0 && q2.roots_rsv[2] == 0;
+    bad += check("FUN6 -> FUN7: historical tracks/globals preserved, neutral Roots gains and bypass", ok);
+    v6.t[1].step[2].vel ^= 1u;
+    memcpy(&buf, &v6, sizeof v6);
+    bad += check("FUN6 with a bad checksum: refused", !proj_import(&q2, &buf, (int)sizeof v6));
+    v6.t[1].step[2].vel ^= 1u;
+    v6.sum = proj_v6_sum(&v6);
+    memcpy(&buf, &v6, sizeof v6);
+    bad += check("FUN6 with a wrong length: refused", !proj_import(&q2, &buf, (int)sizeof v6 - 2));
+
+    /* FUN7 round trip: four gains and the enable flag are part of the checksum. */
+    q.roots_gain[0] = 32768u, q.roots_gain[1] = 16384u, q.roots_gain[2] = 8192u, q.roots_gain[3] = 0u;
+    q.roots_enabled = 1;
     q.sum = proj_sum(&q);
     memcpy(&buf, &q, sizeof q);
-    bad += check("FUN6 -> FUN6: as stored (levels, ratchets, lanes, nudges, locks, fill conditions, INSERT, SYNC, engine 8)",
-                 proj_import(&q2, &buf, (int)sizeof q) && !memcmp(&q, &q2, sizeof q) && q2.t[1].engine == 8 &&
-                 pt_micro(&q2.t[0], 3) == -32 && pt_fill(&q2.t[0], 3) == FC_FILL && pt_micro(&q2.t[0], 4) == 31 &&
-                 q2.t[0].lock[1].val == 100 && q2.t[2].lock[23].step == 63 && q2.t[2].p[P_TFLT] == -30 &&
-                 pt_get(&q2.t[1], P_ITYPE) == 4 && pt_get(&q2.t[1], P_IMIX) == 90 && pt_get(&q2.t[TRK_DRUM], P_ITYPE) == 2 &&
-                 pt_get(&q2.t[0], P_LSYNC) == 5 && pt_get(&q2.t[0], P_ESYNC) == 1 && pt_get(&q2.t[0], P_FTYPE) == 2);
+    bad += check("FUN7 -> FUN7: settings and historical track data round-trip",
+                 proj_import(&q2, &buf, (int)sizeof q) && !memcmp(&q, &q2, sizeof q));
+    buf.v7.roots_gain[2] ^= 1u;
+    bad += check("FUN7 with a bad Roots checksum: refused", !proj_import(&q2, &buf, (int)sizeof q));
+    q.roots_gain[2] ^= 1u;
+    q.sum = proj_sum(&q);
 
     /* damaged / wrong size */
     v2.t[1].p[3]++;
@@ -322,11 +353,11 @@ int main(void)
     memcpy(&buf, &v2, sizeof v2);
     bad += check("FUN2 with a wrong length: refused", !proj_import(&q2, &buf, (int)sizeof v2 - 2));
     memcpy(&buf, &q, sizeof q);
-    buf.v4.magic = PROJ_MAGIC_V3;
-    bad += check("FUN6 size with a FUN3 magic: refused", !proj_import(&q2, &buf, (int)sizeof q));
+    buf.v7.magic = PROJ_MAGIC_V3;
+    bad += check("FUN7 size with a FUN3 magic: refused", !proj_import(&q2, &buf, (int)sizeof q));
     memcpy(&buf, &q, sizeof q);
-    buf.v6.magic = PROJ_MAGIC_V5;
-    bad += check("FUN6 size with a FUN5 magic: refused", !proj_import(&q2, &buf, (int)sizeof q));
+    buf.v7.magic = PROJ_MAGIC_V5;
+    bad += check("FUN7 size with a FUN5 magic: refused", !proj_import(&q2, &buf, (int)sizeof q));
     memcpy(&buf, &v3, sizeof v3);
     buf.v3.t[2].step[7].vel ^= 1u;
     bad += check("FUN3 with a bad checksum: refused", !proj_import(&q2, &buf, (int)sizeof v3));
