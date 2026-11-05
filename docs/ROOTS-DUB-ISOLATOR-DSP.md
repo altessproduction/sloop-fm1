@@ -86,12 +86,10 @@ kHz pour cette première version.
 
 Trois séparateurs × (deux biquads passe-bas + deux passe-haut) = 12 biquads
 par canal. La compensation all-pass ajoute 6 biquads par canal (SUB à 350 et
-2 500 Hz, BASS à 2 500 Hz), soit 18 par canal et 36 pour la stéréo. Un biquad direct-form II transposé utilise
-deux états par section. Prévoir deux canaux totalement indépendants. Le coût
-théorique est de l'ordre de 120 multiplications par échantillon stéréo (selon
-l'implémentation et les opérations fusionnées), à mesurer sur le FM-1 avant
-d'activer l'effet. Si le coût est trop élevé, optimiser sans modifier la
-réponse mesurée.
+2 500 Hz, BASS à 2 500 Hz), soit 18 par canal et 36 pour la stéréo. Avec cinq
+multiplications par biquad, l'ordre de grandeur est de 180 multiplications par
+échantillon stéréo. Les états sont indépendants par canal. Ce coût doit être
+mesuré sur le FM-1 avant toute activation.
 
 ### Tests d'acceptation avant raccordement
 
@@ -138,3 +136,13 @@ unitaire (écart inférieur à 0,001 % sur les fréquences échantillonnées de
 quantification et des arrondis fixes. Il reste à exécuter ce test sur un
 checkout complet, mesurer le coût CPU sur le FM-1 et vérifier les transitoires
 et les crêtes à tous les réglages.
+
+
+## État actuel du prototype LR4
+
+Le code fixe les tableaux d'états pour les trois séparateurs et applique les
+compensations all-pass aux branches SUB et BASS. Le test C couvre bypass,
+muting, réponse de recomposition à ±0,5 %, masques de bandes et saturation.
+Attention : ces assertions sont écrites mais ne constituent pas une preuve
+d'exécution tant que le test n'a pas été compilé et lancé sur un checkout. Le
+module reste non intégré au bus maître, et le coût CPU cible n'est pas mesuré.
