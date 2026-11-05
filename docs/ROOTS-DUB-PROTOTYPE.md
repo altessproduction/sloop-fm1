@@ -25,7 +25,7 @@ Le signal de test passe dans quatre branches parallèles :
 - MIDS : passe-haut à 350 Hz puis passe-bas à 2 500 Hz, deux étages par filtre.
 - TOPS : passe-haut à 2 500 Hz, deux étages Butterworth.
 
-Chaque branche possède un gain indépendant de -24 à +6 dB. Les pentes visées sont des Linkwitz–Riley d'ordre 4 (cascades de deux Butterworth d'ordre 2). Pour réaligner les phases avant sommation, SUB traverse les all-pass LR4 à 350 Hz et 2 500 Hz ; BASS traverse celui à 2 500 Hz. Ces all-pass sont eux-mêmes deux biquads `allpass` en cascade. Les fréquences sont provisoires et le navigateur utilise les biquads de Web Audio.
+Chaque branche possède un gain indépendant de -24 à +6 dB. Les pentes visées sont des Linkwitz–Riley d'ordre 4 (cascades de deux Butterworth d'ordre 2). Pour réaligner les phases avant sommation, SUB traverse un biquad all-pass à 350 Hz puis un à 2 500 Hz ; BASS traverse un biquad all-pass à 2 500 Hz. La somme d'un couple LR4 LP/HP correspond à un seul all-pass du second ordre. Les fréquences sont provisoires et le navigateur utilise les biquads de Web Audio.
 
 ## Limites et prochaines validations
 
@@ -45,4 +45,4 @@ Le contenu HTML et le bloc JavaScript ont été relus depuis la branche GitHub. 
 
 ## Mise à jour — compensation de phase
 
-Le graphe du laboratoire applique désormais la même stratégie de compensation que le prototype C LR4 : deux biquads all-pass à 350 Hz puis deux à 2 500 Hz sur SUB, et deux à 2 500 Hz sur BASS. Le test web vérifie la présence de ces branches et compile le bloc JavaScript pour détecter les erreurs de syntaxe. Cela reste un contrôle statique : il ne mesure pas la réponse fréquentielle réelle du navigateur.
+Le graphe du laboratoire applique désormais la même stratégie de compensation que le prototype C LR4 : un biquad all-pass à 350 Hz puis un à 2 500 Hz sur SUB, et un à 2 500 Hz sur BASS. Le test web vérifie la présence de ces branches et compile le bloc JavaScript pour détecter les erreurs de syntaxe. Cela reste un contrôle statique : il ne mesure pas la réponse fréquentielle réelle du navigateur.
