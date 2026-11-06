@@ -2196,9 +2196,8 @@ static void t_roots_patterns(void)
           dstep_has(&TDRUM->dstep[11], 0),
           "ROOTS DUB skank: existing drum pattern is preserved");
     {
-        uint32_t style, active;
+        uint32_t style, active, step;
         for (style = 0; style < 10u; style++) {
-            uint32_t step;
             active = 0;
             roots_dub_pattern_apply((uint8_t)style);
             for (step = 0; step < 16u; step++)
