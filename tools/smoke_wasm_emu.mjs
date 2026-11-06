@@ -43,7 +43,18 @@ try {
     }
     return { lit, hash: hash >>> 0 };
   });
+  // GLO is a performance layer: it changes the key/button LEDs, not necessarily
+  // the LCD pixels. Test the actual panel feedback rather than expecting a new page.
+  const ledState = () => page.evaluate(() =>
+    [...document.querySelectorAll('.pill, .btn')]
+      .map(el => el.classList.contains('lit') ? 'lit' : el.classList.contains('glow') ? 'glow' : '-')
+      .join(',')
+  );
+  const muteLedState = () => page.locator('.pill').first().evaluate(el =>
+    el.classList.contains('lit') ? 'lit' : el.classList.contains('glow') ? 'glow' : '-'
+  );
   const home = await screenState();
+  const homeLeds = await ledState();
   if (home.lit < 100) throw new Error(`LCD did not render firmware UI (lit pixels: ${home.lit})`);
 
   const key = page.locator('.pill').first();
@@ -60,20 +71,42 @@ try {
   await key.dispatchEvent('pointerup', { pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
   if (!(rms > 0.00001)) throw new Error(`AudioWorklet output is silent (RMS ${rms})`);
 
-  await page.keyboard.down('6');                 // GLO: open its page family
-  await page.waitForTimeout(160);
+  await page.keyboard.down('6');                 // Hold GLO, then HOME locks the layer open.
+  await page.waitForTimeout(80);
+  await page.keyboard.down('7');
+  await page.waitForTimeout(80);
+  await page.keyboard.up('7');
+  await page.waitForTimeout(80);
   await page.keyboard.up('6');
   await page.waitForTimeout(500);
   const mixer = await screenState();
-  if (mixer.hash === home.hash) throw new Error('GLO did not open its page family');
-  await page.keyboard.down('7');                 // HOME: leave GLO
-  await page.waitForTimeout(160);
+  const mixerLeds = await ledState();
+  const muteBefore = await muteLedState();
+  if (mixerLeds === homeLeds) throw new Error('GLO + HOME did not change the panel LEDs to the locked GLO layer');
+
+  // In GLO, the first white key toggles MUTE 1. Toggle it twice so the
+  // smoke test verifies the real action without leaving the saved project changed.
+  await key.dispatchEvent('pointerdown', { pointerId: 2, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
+  await page.waitForTimeout(120);
+  await key.dispatchEvent('pointerup', { pointerId: 2, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
+  await page.waitForTimeout(250);
+  const mutedLed = await muteLedState();
+  if (mutedLed === muteBefore) throw new Error('GLO key 1 did not change MUTE 1 feedback');
+  await key.dispatchEvent('pointerdown', { pointerId: 3, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
+  await page.waitForTimeout(120);
+  await key.dispatchEvent('pointerup', { pointerId: 3, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
+  await page.waitForTimeout(250);
+  if (await muteLedState() !== muteBefore) throw new Error('GLO MUTE 1 did not toggle back to its original state');
+
+  await page.keyboard.down('7');                 // HOME unlocks the GLO layer.
+  await page.waitForTimeout(80);
   await page.keyboard.up('7');
   await page.waitForTimeout(500);
   const returned = await screenState();
-  if (returned.hash !== home.hash) throw new Error('HOME did not leave the GLO page family');
+  const returnedLeds = await ledState();
+  if (returnedLeds !== homeLeds) throw new Error('HOME did not restore the normal panel LEDs after GLO');
   if (errors.length) throw new Error('Browser errors: ' + errors.join(' | '));
-  console.log(JSON.stringify({ ok: true, litPixels: home.lit, audioRms: rms, gloPage: true, homeExit: true }));
+  console.log(JSON.stringify({ ok: true, litPixels: home.lit, audioRms: rms, gloLayerLocked: true, homeUnlock: true }));
 } finally {
   await browser.close();
 }
