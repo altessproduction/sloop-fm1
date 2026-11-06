@@ -1239,7 +1239,7 @@ static void mix_block(int32_t *out, uint32_t n)
         proj_roots_audio_state(&enabled, gain);
         roots_iso_l.enabled = roots_iso_r.enabled = enabled;
         for (i = 0; i < 4u; i++)
-            roots_iso_l.gain[i] = roots_iso_r.gain[i] = gain[i];
+            roots_iso_l.target[i] = roots_iso_r.target[i] = (uint8_t)(((uint32_t)gain[i] * 127u + 16384u) / 32768u);
         for (i = 0; i < n; i++) {
             mix_l[i] = roots_lr4_process(&roots_iso_l, mix_l[i]);
             mix_r[i] = roots_lr4_process(&roots_iso_r, mix_r[i]);
