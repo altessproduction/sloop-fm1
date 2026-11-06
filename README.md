@@ -5,6 +5,7 @@ Free and open source (GPL-3.0), based on <a href="https://github.com/hugelton/Fe
 
 <p align="center">
 <a href="https://isod89.github.io/sloop-fm1/"><b>Install from the browser</b></a> ·
+<a href="https://altessproduction.github.io/sloop-fm1/roots-dub/"><b>ROOTS DUB emulator</b></a> ·
 <a href="GUIDE.md">Complete guide</a> ·
 <a href="SLOOP.md">Manual</a> ·
 <a href="DEMARRAGE-RAPIDE-FR.md">Guide en français</a> ·
