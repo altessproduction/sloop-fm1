@@ -24,6 +24,11 @@ jobs:
         run: python3 tools/build_preview.py
       - name: Compare native and WebAssembly output for every engine
         run: tests/run_preview_tests.sh
+      - name: Exercise the actual native FM-1 UI, including ROOTS DUB menu actions
+        run: |
+          mkdir -p build/host
+          cc -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o build/host/ui_pages_test tests/ui_pages_test.c -lm
+          build/host/ui_pages_test build/host
       - name: Test ROOTS DUB crossover and chord behavior
         run: |
           mkdir -p build/host
