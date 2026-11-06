@@ -1,5 +1,5 @@
 name: ROOTS DUB WebAssembly emulator
-# Re-run the browser HAL compile gate after each compatibility fix.
+# Re-run the browser HAL compile gate after each compatibility fix (including the latest flash HAL mapping).
 on:
   pull_request:
     paths:
