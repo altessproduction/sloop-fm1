@@ -1,4 +1,5 @@
 name: Publish ROOTS DUB web emulator
+# Requires GitHub Pages to be enabled in repository Settings > Pages (Source: GitHub Actions).
 
 on:
   push:
