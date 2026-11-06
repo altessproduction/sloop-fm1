@@ -2198,14 +2198,13 @@ static void t_roots_patterns(void)
     {
         uint32_t style, active;
         for (style = 0; style < 10u; style++) {
-            uint32_t lane, step;
+            uint32_t step;
             active = 0;
             roots_dub_pattern_apply((uint8_t)style);
             for (step = 0; step < 16u; step++)
                 active |= dstep_mask(&TDRUM->dstep[step]);
             check(TDRUM->seq_active && TDRUM->p[P_SLEN] == 16 && active != 0,
                   "ROOTS DUB: every expanded drum groove loads a non-empty 16-step pattern");
-            (void)lane;
         }
         for (style = 0; style < 8u; style++) {
             roots_dub_bass_apply((uint8_t)style);
