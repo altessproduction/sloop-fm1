@@ -304,6 +304,7 @@ int main(void)
     test_out_of_order_and_abort();
     test_transport_busy();
     test_fun6_migration();
+    test_section_fun7_roundtrip();
     test_section_flash_failure();
     puts("deterministic BK_PUT integration tests passed");
     return 0;
