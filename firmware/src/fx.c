@@ -3,7 +3,15 @@
 /* Effects: per-track DIST insert, then sends into three shared buses (chorus, tempo delay, reverb).
  * Stereo dry mix; the chorus and the reverb come back in stereo, the delay in the middle. */
 #include "roots_lr4_isolator.h"
-extern void proj_roots_audio_state(uint8_t *enabled, uint16_t gain[4]);
+/* Host preview builds do not link project.c: keep the isolator safely bypassed there.
+ * The full firmware's project.c supplies the strong implementation below this weak fallback. */
+__attribute__((weak)) void proj_roots_audio_state(uint8_t *enabled, uint16_t gain[4])
+{
+    uint32_t i;
+    *enabled = 0;
+    for (i = 0; i < 4u; i++)
+        gain[i] = 32768u;
+}
 #define DLY_LEN 65536u           /* 1.49 s: 1/4 down to 41 BPM, 1/8 dotted down to 31, 1/4 dotted down to 61 (clamped below) */
 #define CHO_LEN 2048u
 static int16_t dly_buf[DLY_LEN] __attribute__((section(".pool")));
