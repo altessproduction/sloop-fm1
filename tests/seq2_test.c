@@ -2176,9 +2176,22 @@ static void t_roots_patterns(void)
     check(trk[0].p[P_CHORD] == 0 && TDRUM->p[P_SLEN] == 16,
           "ROOTS DUB bass: mono notes, drum loop remains separate");
     roots_dub_skank_apply(0);
-    check(trk[0].p[P_CHORD] == 6 && trk[0].step[2].n == 1 &&
-          trk[0].step[2].time == ST_NOTE && trk[0].step[0].n == 0,
-          "ROOTS DUB skank: offbeat one-key SKANK phrase");
+    check(trk[0].p[P_CHORD] == 6 && trk[0].step[2].n == 4 &&
+          trk[0].step[2].time == ST_NOTE && trk[0].step[0].n == 0 &&
+          trk[0].step[2].note[0] < trk[0].step[2].note[1] &&
+          trk[0].step[2].note[1] < trk[0].step[2].note[2] &&
+          trk[0].step[2].note[2] < trk[0].step[2].note[3],
+          "ROOTS DUB skank: offbeat phrase stores all four SKANK chord notes");
+    {
+        uint8_t notes[4];
+        uint32_t chord, ok = 1;
+        for (chord = 6; chord <= 9u; chord++) {
+            trk[0].p[P_CHORD] = (int16_t)chord;
+            ok &= chord_play_notes(&trk[0], 60u, 0u, notes) == 4u;
+        }
+        check(ok && trk[0].p[P_CHORD] == 9,
+              "ROOTS DUB SKANK / SK7 / SK9 / SKSUS: all four chord types remain selectable");
+    }
     check(TDRUM->seq_active && dstep_has(&TDRUM->dstep[7], 0) &&
           dstep_has(&TDRUM->dstep[11], 0),
           "ROOTS DUB skank: existing drum pattern is preserved");
