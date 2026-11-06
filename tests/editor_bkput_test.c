@@ -113,6 +113,35 @@ static void test_out_of_order_and_abort(void)
         fail("out-of-order/aborted BK_PUT changed the working project");
 }
 
+static void test_transport_busy(void)
+{
+    project_t before, after;
+    uint8_t raw[sizeof(project_t)];
+    uint8_t a[320];
+    uint32_t len = sizeof(project_t), n, pos = 0;
+    stop_all();
+    proj_capture(&before);
+    memcpy(raw, &before, len);
+    a[0] = 0; a[1] = 0; put5(a + 2, len); put5(a + 7, st_crc32(raw, len));
+    cmdv(ED_BK_PUT, a, 12);
+    if (rx_n < 8 || rx_last[7] != 0) fail("busy transfer begin");
+    while (pos < len) {
+        uint32_t k = len - pos > 256u ? 256u : len - pos;
+        a[0] = 1; a[1] = 0; put5(a + 2, pos);
+        n = 7u + pack7(a + 7, raw + pos, k);
+        cmdv(ED_BK_PUT, a, n);
+        if (rx_n < 8 || rx_last[7] != 0) fail("busy transfer data");
+        pos += k;
+    }
+    song.playing = 1;
+    a[0] = 2; a[1] = 0; cmdv(ED_BK_PUT, a, 2);
+    song.playing = 0;
+    expect_commit_rc(3, "BK_PUT commit must reject active transport");
+    proj_capture(&after);
+    if (memcmp(&before, &after, sizeof before))
+        fail("busy BK_PUT changed the working project");
+}
+
 static void test_fun6_migration(void)
 {
     project_t current, restored;
@@ -182,6 +211,7 @@ int main(void)
     after();
     test_bad_crc_and_incomplete();
     test_out_of_order_and_abort();
+    test_transport_busy();
     test_fun6_migration();
     test_section_flash_failure();
     puts("deterministic BK_PUT integration tests passed");
