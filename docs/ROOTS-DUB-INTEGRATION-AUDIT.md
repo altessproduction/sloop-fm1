@@ -199,9 +199,7 @@ La relecture approfondie a retrouvé un banc d'intégration existant, plus compl
 - Le mode 1 du même fuzzer génère aussi des contenus de sauvegarde de projets et les soumet au véritable chemin BK_PUT ; il mêle objets valides, migrés, mutés et transferts interrompus.
 - `tests/editor_fuzz.sh` compile ce banc sous AddressSanitizer et UndefinedBehaviorSanitizer, puis lance notamment les modes 1 et 6.
 
-Cela invalide l'hypothèse précédente selon laquelle le chemin éditeur complet n'avait pas de banc hôte : il en existe déjà un. En revanche, la couverture reste incomplète sur quelques assertions déterministes spécifiques à ROOTS DUB : restauration BK_PUT explicite d'un FUN6, CRC de transfert incorrect avec vérification de non-modification, échec programmé de flash lors de l'écriture d'une section avec vérification de conservation de l'ancienne copie, et cas de transfert incomplet vérifié par son code de retour. Le mode fuzz peut rencontrer certains de ces cas, mais ne constitue pas à lui seul une preuve ciblée et reproductible de chacun.
-
-La prochaine extension pertinente est donc d'ajouter ces scénarios déterministes à `tests/editor_fuzz.c` / `tests/editor_host.c`, en réutilisant les fonctions de construction de trames et le faux NOR existants. Ne pas créer un second banc de flash ni prétendre que ces scénarios sont déjà couverts. Aucun de ces tests n'a été exécuté dans cet environnement.
+Cette découverte a permis d'ajouter une suite déterministe dédiée, décrite ci-dessous. Les scénarios ciblés ne sont donc plus seulement des travaux à faire : ils sont implémentés dans `tests/editor_bkput_test.c`, qui réutilise le banc réel. Ils restent toutefois non validés tant que la compilation et l'exécution sous ASan/UBSan n'ont pas été réalisées dans un environnement disposant des artefacts générés par `./build.sh`.
 
 ### 2026-11-05 — régressions BK_PUT déterministes ajoutées
 
