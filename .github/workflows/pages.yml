@@ -44,8 +44,14 @@ jobs:
       - name: Preserve existing published tools and add ROOTS DUB link
         run: |
           mkdir -p public
-          if [ -f index.html ]; then cp index.html public/index.html; fi
           if [ -d web ]; then cp -R web public/web; fi
+          cat > public/index.html <<'EOF'
+          <!doctype html>
+          <html lang="fr">
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0;url=./roots-dub/"><title>SLOOP ROOTS DUB</title></head>
+          <body><p><a href="./roots-dub/">Ouvrir l’émulateur SLOOP ROOTS DUB</a></p></body>
+          </html>
+          EOF
           cat > public/roots-dub/README.txt <<'EOF'
           SLOOP ROOTS DUB browser emulator.
           This directory contains the tested SLOOP WebAssembly AudioWorklet build.
