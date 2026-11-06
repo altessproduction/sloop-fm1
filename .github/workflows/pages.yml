@@ -3,7 +3,6 @@ on:
   workflow_run:
     workflows: ["ROOTS DUB WebAssembly emulator"]
     types: [completed]
-    branches: [main]
 
 permissions:
   actions: read
