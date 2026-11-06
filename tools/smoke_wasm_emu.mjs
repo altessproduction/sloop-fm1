@@ -30,16 +30,21 @@ try {
   await page.waitForFunction(() => document.querySelector('#power') === null);
   await page.waitForTimeout(1800);
 
-  const screen = await page.evaluate(() => {
+  const screenState = () => page.evaluate(() => {
     const c = document.querySelector('#screen');
     if (!c) throw new Error('FM-1 LCD canvas #screen is missing');
     const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-    let lit = 0;
-    for (let i = 0; i < d.length; i += 4)
+    let lit = 0, hash = 2166136261;
+    for (let i = 0; i < d.length; i += 4) {
       if (d[i] || d[i + 1] || d[i + 2]) lit++;
-    return lit;
+      hash = Math.imul(hash ^ d[i], 16777619);
+      hash = Math.imul(hash ^ d[i + 1], 16777619);
+      hash = Math.imul(hash ^ d[i + 2], 16777619);
+    }
+    return { lit, hash: hash >>> 0 };
   });
-  if (screen < 100) throw new Error(`LCD did not render firmware UI (lit pixels: ${screen})`);
+  const home = await screenState();
+  if (home.lit < 100) throw new Error(`LCD did not render firmware UI (lit pixels: ${home.lit})`);
 
   const key = page.locator('.pill').first();
   await key.waitFor();
@@ -54,8 +59,18 @@ try {
   });
   await key.dispatchEvent('pointerup', { pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
   if (!(rms > 0.00001)) throw new Error(`AudioWorklet output is silent (RMS ${rms})`);
+
+  const glo = page.locator('.btn').filter({ hasText: 'GLO' }).first();
+  await glo.dispatchEvent('pointerdown', { pointerId: 2, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
+  await page.waitForTimeout(350);
+  const mixer = await screenState();
+  await glo.dispatchEvent('pointerup', { pointerId: 2, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
+  await page.waitForTimeout(350);
+  const returned = await screenState();
+  if (mixer.hash === home.hash) throw new Error('GLO did not open a distinct firmware screen');
+  if (returned.hash !== home.hash) throw new Error('Releasing GLO did not return to the previous firmware screen');
   if (errors.length) throw new Error('Browser errors: ' + errors.join(' | '));
-  console.log(JSON.stringify({ ok: true, litPixels: screen, audioRms: rms }));
+  console.log(JSON.stringify({ ok: true, litPixels: home.lit, audioRms: rms, gloLayer: true, gloExit: true }));
 } finally {
   await browser.close();
 }
