@@ -11,7 +11,7 @@ static double measure(double hz, int mask)
 {
     roots_lr4_t s; unsigned n; double si=0,co=0;
     roots_lr4_init(&s); s.enabled=1;
-    for(n=0;n<4;n++) s.gain[n]=(mask&(1u<<n))?32768:0;
+    for(n=0;n<4;n++) { s.gain[n]=(mask&(1u<<n))?32768:0; s.target[n]=(mask&(1u<<n))?127:0; }
     for(n=0;n<44100*2;n++) {
         double a=sin(2.0*3.141592653589793*hz*n/44100.0);
         int32_t y=roots_lr4_process(&s,(int32_t)(a*50000.0));
@@ -28,7 +28,7 @@ int main(void)
     roots_lr4_init(&s);
     for(i=0;i<1000;i++){x=(int32_t)(i*7919u)-3950000;CHECK(roots_lr4_process(&s,x)==x,"bypass exact");}
     s.enabled=1;
-    for(i=0;i<4;i++) s.gain[i]=0;
+    for(i=0;i<4;i++) { s.gain[i]=0; s.target[i]=0; }
     for(i=0;i<64;i++) (void)roots_lr4_process(&s,(i&1)?50000:-50000);
     CHECK(s.wet==32768u,"enable ramp reaches fully wet in 64 samples");
     for(i=0;i<1000;i++) CHECK(roots_lr4_process(&s,(i&1)?50000:-50000)==0,"all mute");
@@ -41,7 +41,7 @@ int main(void)
     for(i=0;i<64;i++) (void)roots_lr4_process(&s,10000);
     CHECK(s.wet==32768u && s.running,"re-enable restarts filter state and fades in");
     roots_lr4_init(&s); s.enabled=1;
-    for(i=0;i<4;i++) s.gain[i]=32768;
+    for(i=0;i<4;i++) { s.gain[i]=32768; s.target[i]=127; }
     for(i=0;i<100000;i++) y=roots_lr4_process(&s,10000);
     CHECK(abs(y-10000)<=25,"unity DC within fixed-point Q8 rounding tolerance (0.25 %)");
     {
