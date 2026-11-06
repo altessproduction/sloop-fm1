@@ -20,6 +20,7 @@ python3 "$ROOT/tools/gen_fm6_patches.py" "$GEN/felucca_fm6.h"
 python3 "$ROOT/tools/gen_logo.py" "$GEN/sloop_logo.h"
 
 python3 "$ROOT/tools/patch_sloop_wasm.py" "$EMU/src/sloop_wasm.c"
+python3 "$ROOT/tools/patch_sloop_web_ui.py" "$EMU/web"
 (
   cd "$EMU"
   SLOOP="$ROOT" FELUCCA="$ROOT/build/no-felucca" sh ./build.sh
