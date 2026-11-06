@@ -118,13 +118,17 @@ try {
   if (!(isolatorRestoredRms > 0.00001)) throw new Error('ROOTS isolator bypass did not restore master audio');
 
   const chordMode = rootsPanel.locator('select').nth(1);
-  await chordMode.selectOption('6');          // Native SKANK mode on synth track 1.
-  await page.waitForTimeout(80);
-  await key.dispatchEvent('pointerdown', { pointerId: 22, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
-  await page.waitForTimeout(180);
-  const skankRms = await measureRms();
-  await key.dispatchEvent('pointerup', { pointerId: 22, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
-  if (!(skankRms > 0.00001)) throw new Error('One-key SKANK mode did not produce firmware audio');
+  const skankRms = [];
+  for (const [i, mode] of ['6', '7', '8', '9'].entries()) {
+    await chordMode.selectOption(mode);        // SKANK, SK7, SK9, SKSUS on synth track 1.
+    await page.waitForTimeout(80);
+    const pointerId = 22 + i;
+    await key.dispatchEvent('pointerdown', { pointerId, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
+    await page.waitForTimeout(180);
+    skankRms.push(await measureRms());
+    await key.dispatchEvent('pointerup', { pointerId, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
+    if (!(skankRms[i] > 0.00001)) throw new Error(`One-key SKANK voicing ${mode} did not produce firmware audio`);
+  }
   await chordMode.selectOption('0');
 
   await page.keyboard.down('6');                 // Hold GLO, then HOME locks the layer open.
