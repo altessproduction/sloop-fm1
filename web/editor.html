@@ -3129,6 +3129,16 @@ function makeMockDevice(opt = {}) {
         P("BITCRUSH", [0, 40, 90, 40, 64, 0, 0, 100], [0, 70, 110, 40], 0),
         P("RADIO", [2, 20, 70, 90, 64, 0, 60, 48], [10, 70, 120, 50], 0)] },
   ];
+  /* ROOTS DUB: the same appended firmware engine index (12, after NOISE). */
+  ENG.push({ name: "SIREN", titles: ["PITCH", "MOD"],
+    edit: [D("TUNE", F.INT, -24, 24, 0), D("SWEEP", F.INT, -48, 48, 0), D("TIME", F.TIME, 0, 127, 78),
+      D("LFO", F.LFOHZ, 0, 127, 22), D("DEPTH", F.PCT, 0, 127, 42), D("CUT", F.CUTOFF, 0, 127, 112),
+      D("RES", F.PCT, 0, 127, 78), E("WAVE", ["SINE", "TRI", "SAW", "PULSE"], 0)],
+    presets: [P("DUB SIREN", [0, 24, 78, 22, 42, 112, 78, 0], [0, 80, 100, 24], 1),
+      P("AIR HORN", [0, 7, 28, 0, 8, 120, 28, 3], [0, 55, 100, 24], 1),
+      P("FALLING DUB", [0, -24, 92, 16, 24, 96, 68, 1], [0, 72, 100, 32], 1),
+      P("RISING TONE", [0, 30, 110, 8, 18, 88, 55, 2], [0, 90, 100, 36], 1),
+      P("WOBBLE SIREN", [0, 12, 54, 82, 96, 78, 90, 0], [0, 80, 100, 28], 1)] });
   const FM6_E = ENG.findIndex((e) => e.name === "FM6"), FM6_BANK = 27, FM6_NPART = 3;
   const v9 = !opt.legacy && !opt.v3 && !opt.noBackup && !opt.v7 && !opt.v8;   /* SLOOP 2.4: FM6 patches */
   const v10 = v9 && !opt.v9;                         /* SLOOP 2.5: the SYN drum kits */
