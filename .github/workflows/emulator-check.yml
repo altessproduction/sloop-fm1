@@ -1,0 +1,31 @@
+name: Full FM-1 emulator build
+on:
+  pull_request:
+    paths:
+      - "tools/patch_fm1_emu.py"
+      - "web/fm1-roots-emulator.html"
+      - ".github/workflows/emulator-check.yml"
+      - ".github/workflows/pages.yml"
+permissions:
+  contents: read
+jobs:
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust WebAssembly target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Fetch pinned FM-1 emulator source
+        run: |
+          git clone https://github.com/joakimeriksson/fm1-emu.git /tmp/fm1-emu
+          git -C /tmp/fm1-emu checkout 1c6e80a816f07f350aa8abbbce5f040992b219f3
+      - name: Patch same-origin firmware package loader
+        run: python3 tools/patch_fm1_emu.py /tmp/fm1-emu/web/main.js
+      - name: Build the full FM-1 emulator for WebAssembly
+        run: |
+          sh /tmp/fm1-emu/web/build.sh /tmp/fm1-emu-dist
+          test -s /tmp/fm1-emu-dist/fm1_web.wasm
+          test -s /tmp/fm1-emu-dist/main.js
