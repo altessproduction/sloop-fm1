@@ -707,6 +707,12 @@ UI_SMALL static void select_engine(uint32_t e)
     ui.force = 1;
 }
 
+/* ROOTS DUB native menu shortcut: select the playable siren through the same safe engine path. */
+void roots_dub_select_siren(void)
+{
+    select_engine(ENGI_SIREN);
+}
+
 /* the factory presets as one list by kind (basses, keys, organs, pads, leads, plucks and bells, stabs,
  * the rest), then the used user presets: the PRESETS knob and the PRESETS page browse it. By name: an
  * engine's preset table may change order; tests/ui_pages_test.c checks every preset is here once */
@@ -762,6 +768,9 @@ static const struct { uint8_t kind, e; const char *name; } BANK[] = {
     {BK_FX, ENGI_SLICE, "BREAK 16"}, {BK_FX, ENGI_SLICE, "CHOP 8"}, {BK_FX, ENGI_SLICE, "REVERSE"},
     {BK_FX, ENGI_SLICE, "USR SLICE"},
 #endif
+    {BK_FX, ENGI_SIREN, "DUB SIREN"}, {BK_FX, ENGI_SIREN, "AIR HORN"},
+    {BK_FX, ENGI_SIREN, "FALLING DUB"}, {BK_FX, ENGI_SIREN, "RISING TONE"},
+    {BK_FX, ENGI_SIREN, "WOBBLE SIREN"},
 };
 #define NBANK (sizeof BANK / sizeof BANK[0])
 static uint8_t bank_pi[NBANK];                       /* the preset index of each entry in its engine */

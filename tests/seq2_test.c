@@ -2168,6 +2168,21 @@ static void t_roots_patterns(void)
     check(dstep_has(&TDRUM->dstep[7], 0) && dstep_has(&TDRUM->dstep[11], 0) &&
           dstep_has(&TDRUM->dstep[15], 2),
           "ROOTS DUB BREAK: sparse kick and late snare accents");
+    song.sel = 0;
+    roots_dub_bass_apply(0);
+    check(trk[0].p[P_SLEN] == 16 && trk[0].seq_active && trk[0].step[0].n == 1 &&
+          trk[0].step[0].note[0] >= 36 && trk[0].step[0].note[0] <= 59,
+          "ROOTS DUB bass: loads a 16-step bass phrase in the selected synth part");
+    check(trk[0].p[P_CHORD] == 0 && TDRUM->p[P_SLEN] == 16,
+          "ROOTS DUB bass: mono notes, drum loop remains separate");
+    roots_dub_skank_apply(0);
+    check(trk[0].p[P_CHORD] == 6 && trk[0].step[2].n == 1 &&
+          trk[0].step[2].time == ST_NOTE && trk[0].step[0].n == 0,
+          "ROOTS DUB skank: offbeat one-key SKANK phrase");
+    check(TDRUM->seq_active && dstep_has(&TDRUM->dstep[7], 0) &&
+          dstep_has(&TDRUM->dstep[11], 0),
+          "ROOTS DUB skank: existing drum pattern is preserved");
+    song.sel = 0;
 }
 int main(void)
 {
