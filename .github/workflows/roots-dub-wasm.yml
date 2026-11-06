@@ -40,6 +40,9 @@ jobs:
           test -s build/sloop-web-emu/dist/worklet.js
           file build/sloop-web-emu/dist/sloop.wasm
           ls -lh build/sloop-web-emu/dist/sloop.wasm
+          for label in "ROOTS" "DUB PAT" "DUB PLAY" "DUB BASS" "DUB SKANK" "SKANK CHORD" "DUB SIREN"; do
+            strings build/sloop-web-emu/dist/sloop.wasm | grep -Fq "$label" || { echo "Missing native FM-1 menu label: $label"; exit 1; }
+          done
       - name: Install browser smoke-test runtime
         uses: actions/setup-node@v4
         with:
@@ -57,7 +60,7 @@ jobs:
             if curl -fsS http://127.0.0.1:8787/ >/dev/null; then break; fi
             sleep 1
           done
-          node tools/smoke_wasm_emu.mjs
+          node tools/smoke_native_menu.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: roots-dub-webassembly-emulator
