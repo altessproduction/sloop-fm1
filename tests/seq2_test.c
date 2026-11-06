@@ -2179,7 +2179,8 @@ static void t_roots_patterns(void)
     check(trk[0].p[P_CHORD] == 6 && trk[0].step[2].n == 1 &&
           trk[0].step[2].time == ST_NOTE && trk[0].step[0].n == 0,
           "ROOTS DUB skank: offbeat one-key SKANK phrase");
-    check(TDRUM->seq_active && dstep_has(&TDRUM->dstep[8], 0),
+    check(TDRUM->seq_active && dstep_has(&TDRUM->dstep[7], 0) &&
+          dstep_has(&TDRUM->dstep[11], 0),
           "ROOTS DUB skank: existing drum pattern is preserved");
     song.sel = 0;
 }
