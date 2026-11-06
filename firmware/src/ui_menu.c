@@ -37,7 +37,7 @@ UI_SMALL static int mi_cpu1_have(void)                      /* the second core i
 static const char *const LIGHTS_NAME[LIGHTS_N] = {"OFF", "LOW", "MID", "HIGH"};   /* every button lit, the labels readable */
 static uint8_t dub_pattern_style;
 static const char *const DUB_PATTERN_NAME[6] = {"ONE DROP", "STEPPERS", "ROCKERS", "ROCKSTEADY", "RUB A DUB", "DUB BREAK"};
-static const char *const DUB_CHORD_NAME[4] = {"SKANK", "SK7", "SK9", "SKSUS"};
+static const char *const DUB_CHORD_NAME[10] = {"OFF", "TRIAD", "7TH", "9TH", "SUS4", "POWER", "SKANK", "SK7", "SK9", "SKSUS"};
 static const char *const KEYS_NAME[KEYS_N] = {"OFF", "C KEYS", "WHITE KEYS", "ALL KEYS"};      /* keys lit too, at the LIGHTS level */
 #define MI_Y0 26                                   /* the first row, under the section tabs */
 #define MI_DY 50                                   /* a row: the label, the value in large type */
@@ -58,7 +58,7 @@ UI_SMALL static const char *mi_value(uint32_t i, uint16_t *c)
     switch (i) {
     case MI_DUB_STYLE: return DUB_PATTERN_NAME[dub_pattern_style % 6u];
     case MI_DUB_APPLY: return "OCT+ TO LOAD";
-    case MI_DUB_CHORD: return DUB_CHORD_NAME[(uint32_t)clamp(TSEL->p[P_CHORD] - 6, 0, 3)];
+    case MI_DUB_CHORD: return DUB_CHORD_NAME[(uint32_t)clamp(TSEL->p[P_CHORD], 0, 9)];
     case MI_DUB_SIREN: return "OCT+ TO SELECT";
     case MI_ROOTS_SUB: case MI_ROOTS_BASS: case MI_ROOTS_MID: case MI_ROOTS_HIGH: {
         static char b[5]; uint8_t enabled, gain[4];
@@ -269,6 +269,7 @@ UI_SMALL static void mi_set(uint32_t i, int32_t s)
         break;
     case MI_DUB_SIREN:
         if (!s) {
+            if (is_drum(TSEL)) { ui_message("SELECT A SYNTH TRACK"); break; }
             roots_dub_select_siren();
             ui_message("DUB SIREN SELECTED");
             ui.force = 1;
