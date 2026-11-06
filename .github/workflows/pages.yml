@@ -2,22 +2,13 @@ name: Publish ROOTS DUB web emulator
 # Requires GitHub Pages to be enabled in repository Settings > Pages (Source: GitHub Actions).
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Build complete FM-1 firmware"]
+    types: [completed]
     branches: [main]
-    paths:
-      - "web/editor.html"
-      - "web/roots-dub-lab.html"
-      - "web/fm1-roots-emulator.html"
-      - "web/preview.js"
-      - "web/preview-worklet.js"
-      - "firmware/src/**"
-      - "firmware/host/**"
-      - "tools/**"
-      - "assets/**"
-      - ".github/workflows/pages.yml"
-  workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
   pages: write
   id-token: write
@@ -28,28 +19,33 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Check out repository
+      - name: Check out the exact source used for the firmware build
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-      - name: Install firmware and WebAssembly build dependencies
+      - name: Download the exact firmware package from the successful build
+        uses: actions/download-artifact@v4
+        with:
+          name: sloop-roots-dub-fm1-fwsc
+          path: build
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - name: Verify the firmware package is present
+        run: test -s build/felucca.fwsc
+      - name: Install WebAssembly build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang lld curl xz-utils git python3-pip
+          sudo apt-get install -y clang lld git python3-pip
           python3 -m pip install --break-system-packages Pillow
-      - name: Fetch JieLi AC79 SDK
-        run: |
-          git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git "$HOME/fw-AC79_AIoT_SDK"
-      - name: Install JieLi pi32v2 toolchain
-        run: sh tools/get_toolchain.sh
-      - name: Build the complete SLOOP ROOTS DUB FM-1 package
-        run: sh build.sh
       - name: Build the SLOOP DSP preview
         run: python3 tools/build_preview.py
       - name: Install Rust WebAssembly target
