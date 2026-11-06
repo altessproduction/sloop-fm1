@@ -57,6 +57,16 @@ try {
   const homeLeds = await ledState();
   if (home.lit < 100) throw new Error(`LCD did not render firmware UI (lit pixels: ${home.lit})`);
 
+  const rootsPanel = page.locator('#roots-controls');
+  await rootsPanel.waitFor();
+  const rootsToggle = rootsPanel.locator('input[type="checkbox"]');
+  const rootsBands = rootsPanel.locator('input[type="range"]');
+  if (await rootsBands.count() !== 4) throw new Error('ROOTS master isolator must expose four band gains');
+  for (let i = 0; i < 4; i++)
+    await rootsBands.nth(i).evaluate(el => { el.value = '127'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await rootsToggle.check();
+  await page.waitForTimeout(120);
+
   const key = page.locator('.pill').first();
   await key.waitFor();
   await key.dispatchEvent('pointerdown', { pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
@@ -89,12 +99,6 @@ try {
   if (silentWindows) throw new Error(`AudioWorklet had ${silentWindows} silent retrigger measurements (minimum RMS ${minActivityRms})`);
 
   /* Exercise the browser controls against the actual firmware master bus. */
-  const rootsPanel = page.locator('#roots-controls');
-  await rootsPanel.waitFor();
-  const rootsToggle = rootsPanel.locator('input[type="checkbox"]');
-  const rootsBands = rootsPanel.locator('input[type="range"]');
-  if (await rootsBands.count() !== 4) throw new Error('ROOTS master isolator must expose four band gains');
-  await rootsToggle.check();
   for (let i = 0; i < 4; i++)
     await rootsBands.nth(i).evaluate(el => { el.value = '0'; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.waitForTimeout(120);
