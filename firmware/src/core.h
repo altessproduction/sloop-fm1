@@ -17,9 +17,9 @@ enum { V_POLY, V_MONO, V_LEGATO, V_UNISON };   /* P_VOICE */
 #ifndef FELUCCA_SLICE
 #define FELUCCA_SLICE 0          /* the SLICE engine (eng_slice.c): kept in the tree, not built by default */
 #endif
-/* SLOOP 2.4: FM6 (eng_fm6.c) is engine 9 in every build; SLICE, when built, comes last (10). Projects and user
- * presets store the engine index as a byte, and no shipped SLOOP was built with SLICE, so its number is stored
- * nowhere: FM6 may take 9 and SLICE moves up (engines.c ENGINES[], params.c N_ENGNAME follow this order) */
+/* SLOOP 2.4: FM6 is append-only at index 9. The optional SLICE engine is index 12 when built;
+ * ROOTS DUB appends SIREN after it (index 12 without SLICE, 13 with it). Existing project and user-preset
+ * engine bytes are unchanged in the default build; ENGINES[] and N_ENGNAME follow this order. */
 #define NENGINES (13 + FELUCCA_SLICE)
 #define ENGI_GRAIN 8u            /* GRAIN, PHYS, NOISE (SLOOP 2.5, appended after FM6: the stores keep the numbers) */
 #define ENGI_PHYS 10u
