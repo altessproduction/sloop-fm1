@@ -8,7 +8,7 @@ La page principale est désormais la façade visuelle du M-VAVE FM1 :
 
 Elle représente le boîtier, les molettes MASTER / SELECT / PRESETS / ALGORITHM, les quatre encodeurs KNOB 1–4, les boutons de fonction disposés en deux colonnes, l'écran couleur, une rangée de huit sélecteurs ovales OP1–OP6 / PIT / GLO et les 27 touches. Les molettes peuvent être glissées à la souris ou au doigt ; les touches s'illuminent au contact. ROOTS affiche les quatre gains ; SIREN affiche une page de paramètres de démonstration.
 
-Cette façade est une maquette interactive de présentation. Les commandes n'envoient pas encore de MIDI au firmware, et les molettes ne pilotent pas le DSP embarqué. Le clavier ne produit pas encore de son. Pour écouter le prototype audio séparé, ouvrir le laboratoire audio ci-dessous.
+Le clavier déclenche des notes synthétisées localement avec Web Audio ; le bouton SIREN DUB joue une sirène avec LFO, filtre et écho. Cliquer sur **ACTIVER LE SON** avant de jouer si le navigateur bloque l’audio automatique. Les commandes n'envoient pas de MIDI au firmware et les molettes ne pilotent pas le DSP embarqué : il s'agit d'un instrument de démonstration navigateur, pas d'une émulation bit-exacte du FM1. Pour écouter le prototype audio séparé, ouvrir le laboratoire audio ci-dessous.
 
 ## Éditeur et laboratoire audio
 
