@@ -55,7 +55,7 @@ if '#include "scratch.h"' not in s:
 
 # Expose the firmware's persisted ROOTS master-isolator settings to the emulator UI.
 # These call the same project.c state used by the audio mixer and project serializer.
-needle = '#include "project.c"\\n'
+needle = '#include "project.c"\n'
 insert = needle + '''
 WASM_EXPORT("emu_roots_set") void emu_roots_set(uint32_t enabled, uint32_t sub, uint32_t bass,
                                                 uint32_t mid, uint32_t high)
