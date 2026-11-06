@@ -209,6 +209,7 @@ Une suite dédiée `tests/editor_bkput_test.c` réutilise le banc d'intégration
 
 - restauration SysEx d'un backup FUN6 construit avec le layout historique immuable, puis vérification de sa migration FUN7 et de l'initialisation neutre des quatre gains ROOTS ;
 - restauration SysEx FUN7 valide avec quatre gains distincts (dont zéro et unity), vérification de l'application effective des paramètres, puis remise en place du projet initial pour isoler les scénarios suivants ;
+- restauration SysEx FUN7 valide dans la section A, vérification de la mise à jour RAM et de la persistance flash des quatre gains distincts, puis restauration de la section initiale ;
 - transfert FUN7 avec CRC annoncé incorrect : le commit doit renvoyer le code 2 et le projet de travail doit rester identique ;
 - transfert FUN7 dont le CRC de transport est correct mais dont le checksum interne est invalide : le commit doit renvoyer le code 2 et le projet de travail doit rester identique ;
 - transfert incomplet : le commit doit renvoyer le code 2 et ne pas modifier le projet ;
