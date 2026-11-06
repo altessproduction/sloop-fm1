@@ -359,6 +359,13 @@ static void t_chords(void)
     trk[0].p[P_CHORD] = 1;
     n = chord_notes(&trk[0], kb_map(&trk[0], 9), c); /* D4: ii (dim) */
     check(n == 3u && c[0] == 62 && c[1] == 65 && c[2] == 68, "chord TRIAD on D4 in C minor: D F Ab");
+    trk[0].p[P_SCALE] = 1;                           /* C major */
+    trk[0].p[P_CHORD] = 6;                           /* ROOTS DUB: SKANK, one key */
+    n = chord_notes(&trk[0], 60, c);
+    check(n == 4u && c[0] == 64 && c[1] == 67 && c[2] == 72 && c[3] == 74,
+          "ROOTS DUB SKANK on C4: E G C5 D5, rootless upper voicing");
+    n = chord_play_notes(&trk[0], 60, CM_MINOR, c);
+    check(notes_are(c, n, 63, 67, 72, 74), "ROOTS DUB SKANK + minor modifier: Eb G C5 D5");
     check(kb_map(&trk[0], 8) == KB_SILENT, "chord mode: the black keys are silent");
 }
 
