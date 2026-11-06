@@ -31,8 +31,7 @@ jobs:
           build/host/roots_lr4
           cc -O2 -w -Ibuild/gen -Ifirmware/src -o build/host/seq2 tests/seq2_test.c -lm
           build/host/seq2
-      - name: Regenerate and print factory sound golden renders
+      - name: Verify factory sound golden renders
         run: |
           cc -O2 -w -Ibuild/gen -Ifirmware/src -o build/host/regress tests/regress.c -lm
-          GOLDEN_UPDATE=1 build/host/regress build/host/golden.txt tests/cpu_baseline.txt
-          cat build/host/golden.txt
+          build/host/regress tests/golden.txt tests/cpu_baseline.txt
