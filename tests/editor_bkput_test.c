@@ -85,6 +85,42 @@ static void test_bad_crc_and_incomplete(void)
     if (memcmp(&before, &after, sizeof before)) fail("incomplete BK_PUT changed the working project");
 }
 
+static void test_fun7_roundtrip(void)
+{
+    project_t before, replacement, restored;
+    uint8_t raw[sizeof(project_t)];
+    stop_all();
+    proj_capture(&before);
+    replacement = before;
+    replacement.roots_enabled = 1u;
+    replacement.roots_gain[0] = 0u;
+    replacement.roots_gain[1] = 8192u;
+    replacement.roots_gain[2] = 16384u;
+    replacement.roots_gain[3] = 32768u;
+    replacement.sum = proj_sum(&replacement);
+    memcpy(raw, &replacement, sizeof raw);
+
+    bk_send_exact(0, raw, sizeof raw, st_crc32(raw, sizeof raw), sizeof raw);
+    expect_commit_rc(0, "valid FUN7 BK_PUT restore");
+    audio_blocks(2);
+    proj_capture(&restored);
+    if (!restored.roots_enabled ||
+        restored.roots_gain[0] != 0u ||
+        restored.roots_gain[1] != 8192u ||
+        restored.roots_gain[2] != 16384u ||
+        restored.roots_gain[3] != 32768u)
+        fail("valid FUN7 BK_PUT did not apply and retain ROOTS settings");
+
+    /* Restore the initial working project so later cases remain independent. */
+    memcpy(raw, &before, sizeof raw);
+    bk_send_exact(0, raw, sizeof raw, st_crc32(raw, sizeof raw), sizeof raw);
+    expect_commit_rc(0, "restore initial project after FUN7 roundtrip");
+    audio_blocks(2);
+    proj_capture(&restored);
+    if (memcmp(&before, &restored, sizeof before))
+        fail("FUN7 roundtrip cleanup did not restore the initial project");
+}
+
 static void test_project_checksum_rejected(void)
 {
     project_t before, corrupted, after;
@@ -227,6 +263,7 @@ int main(void)
     harness_init();
     after();
     test_bad_crc_and_incomplete();
+    test_fun7_roundtrip();
     test_project_checksum_rejected();
     test_out_of_order_and_abort();
     test_transport_busy();
