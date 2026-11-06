@@ -85,6 +85,23 @@ static void test_bad_crc_and_incomplete(void)
     if (memcmp(&before, &after, sizeof before)) fail("incomplete BK_PUT changed the working project");
 }
 
+static void test_project_checksum_rejected(void)
+{
+    project_t before, corrupted, after;
+    uint8_t raw[sizeof(project_t)];
+    stop_all();
+    proj_capture(&before);
+    corrupted = before;
+    corrupted.sum ^= 1u; /* valid BK_PUT transport CRC, invalid FUN7 project checksum */
+    memcpy(raw, &corrupted, sizeof raw);
+
+    bk_send_exact(0, raw, sizeof raw, st_crc32(raw, sizeof raw), sizeof raw);
+    expect_commit_rc(2, "invalid FUN7 project checksum must be rejected");
+    proj_capture(&after);
+    if (memcmp(&before, &after, sizeof before))
+        fail("invalid FUN7 project checksum changed the working project");
+}
+
 static void test_out_of_order_and_abort(void)
 {
     project_t before, after;
@@ -210,6 +227,7 @@ int main(void)
     harness_init();
     after();
     test_bad_crc_and_incomplete();
+    test_project_checksum_rejected();
     test_out_of_order_and_abort();
     test_transport_busy();
     test_fun6_migration();
