@@ -3682,6 +3682,7 @@ void roots_dub_skank_apply(uint8_t style)
     memset(t->step, 0, sizeof t->step);
     memset(t->micro, 0, sizeof t->micro);
     memset(t->fill, 0, sizeof t->fill);
+    t->p[P_CHORD] = 6; /* select the SKANK voicing before calculating its notes */
     for (i = 0; i < 16u; i++)
         if (masks[style] & (1u << i)) {
             step_t *s = &t->step[i];
@@ -3695,7 +3696,6 @@ void roots_dub_skank_apply(uint8_t style)
             s->vel = (i & 4u) ? 92u : 108u;
             s->flags = SF_ACCENT;
         }
-    t->p[P_CHORD] = 6; /* one-key SKANK voicing */
     t->p[P_SLEN] = 16;
     t->seq_active = 1;
     t->seq_abs = SEQ_NONE;
