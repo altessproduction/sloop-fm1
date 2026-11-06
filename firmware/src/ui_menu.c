@@ -264,7 +264,10 @@ UI_SMALL static void mi_set(uint32_t i, int32_t s)
         break;
     case MI_DUB_CHORD:
         if (is_drum(TSEL)) { ui_message("SELECT A SYNTH TRACK"); break; }
-        TSEL->p[P_CHORD] = (int16_t)(TSEL->p[P_CHORD] < 6 || TSEL->p[P_CHORD] >= 9 ? 6 : TSEL->p[P_CHORD] + 1);
+        if (TSEL->p[P_CHORD] < 6 || TSEL->p[P_CHORD] > 9)
+            TSEL->p[P_CHORD] = (int16_t)(s < 0 ? 9 : 6);
+        else
+            TSEL->p[P_CHORD] = (int16_t)(6 + ((TSEL->p[P_CHORD] - 6 + (s < 0 ? 3 : 1)) % 4));
         ui.force = 1;
         break;
     case MI_DUB_SIREN:
