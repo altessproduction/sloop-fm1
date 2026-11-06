@@ -25,9 +25,11 @@ try {
   const homeHash=await lcdHash();
   const home=page.locator('.btn').filter({hasText:/HOME/}).first();
   await home.dispatchEvent('pointerdown',{pointerId:1,pointerType:'mouse',isPrimary:true,button:0,buttons:1});
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(900); // native HOME long-press threshold is 700 ms
+  await home.dispatchEvent('pointerup',{pointerId:1,pointerType:'mouse',isPrimary:true,button:0,buttons:0});
+  await page.waitForTimeout(250);
   const menuHash=await lcdHash();
-  if(menuHash===homeHash) throw new Error('Holding the native HOME button did not open the firmware menu');
+  if(menuHash===homeHash) throw new Error('Holding HOME for 700 ms did not open the native firmware menu');
 
   // SELECT is encoder 0. The native menu has SCREEN, LIGHTS, AUDIO, SEQ,
   // SYSTEM, ROOTS, DUB PAT, DUB PLAY, DUB BASS and DUB SKANK sections.
@@ -39,7 +41,6 @@ try {
     hashes.push(await lcdHash());
   }
   if(hashes.every(h=>h===menuHash)) throw new Error('Native menu section selector did not update the LCD');
-  await home.dispatchEvent('pointerup',{pointerId:1,pointerType:'mouse',isPrimary:true,button:0,buttons:0});
   await page.waitForTimeout(250);
 
   if(errors.length) throw new Error('Browser errors: '+errors.join(' | '));
