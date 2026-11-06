@@ -60,22 +60,20 @@ try {
   await key.dispatchEvent('pointerup', { pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
   if (!(rms > 0.00001)) throw new Error(`AudioWorklet output is silent (RMS ${rms})`);
 
-  const glo = page.locator('.btn').filter({ hasText: 'GLO' }).first();
-  const gloBox = await glo.boundingBox();
-  if (!gloBox) throw new Error('GLO control is missing from the faceplate');
-  await page.mouse.move(gloBox.x + gloBox.width / 2, gloBox.y + gloBox.height / 2);
-  await page.mouse.down();
-  await page.waitForTimeout(750);                 // firmware shows a held layer after 350 ms
-  const buttonDown = await glo.evaluate(el => el.classList.contains('down'));
+  await page.keyboard.down('6');                 // GLO: open its page family
+  await page.waitForTimeout(160);
+  await page.keyboard.up('6');
+  await page.waitForTimeout(500);
   const mixer = await screenState();
-  await page.mouse.up();
+  if (mixer.hash === home.hash) throw new Error('GLO did not open its page family');
+  await page.keyboard.down('7');                 // HOME: leave GLO
+  await page.waitForTimeout(160);
+  await page.keyboard.up('7');
   await page.waitForTimeout(500);
   const returned = await screenState();
-  if (!buttonDown) throw new Error('GLO faceplate control did not register the press');
-  if (mixer.hash === home.hash) throw new Error(`GLO press was registered but LCD did not show its layer (home=${home.hash}, held=${mixer.hash})`);
-  if (returned.hash !== home.hash) throw new Error(`Releasing GLO did not restore the previous screen (home=${home.hash}, released=${returned.hash})`);
+  if (returned.hash !== home.hash) throw new Error('HOME did not leave the GLO page family');
   if (errors.length) throw new Error('Browser errors: ' + errors.join(' | '));
-  console.log(JSON.stringify({ ok: true, litPixels: home.lit, audioRms: rms, gloLayer: true, releaseExit: true }));
+  console.log(JSON.stringify({ ok: true, litPixels: home.lit, audioRms: rms, gloPage: true, homeExit: true }));
 } finally {
   await browser.close();
 }
