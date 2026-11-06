@@ -5,18 +5,22 @@ on:
       - "firmware/**"
       - "tools/**"
       - "assets/**"
+      - "web/**"
       - "build.sh"
       - "build.py"
       - ".github/workflows/build-firmware.yml"
+      - ".github/workflows/pages.yml"
   push:
     branches: [main]
     paths:
       - "firmware/**"
       - "tools/**"
       - "assets/**"
+      - "web/**"
       - "build.sh"
       - "build.py"
       - ".github/workflows/build-firmware.yml"
+      - ".github/workflows/pages.yml"
 permissions:
   contents: read
 jobs:
