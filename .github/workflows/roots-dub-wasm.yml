@@ -1,5 +1,6 @@
 name: ROOTS DUB WebAssembly emulator
-# Re-run the browser HAL compile gate after each compatibility fix (including the latest flash HAL mapping).
+# Rebuild and smoke-test the ROOTS DUB browser emulator from the merged firmware sources.
+# Changes here also trigger a fresh, uniquely named GitHub Pages deployment artifact.
 on:
   pull_request:
     paths:
