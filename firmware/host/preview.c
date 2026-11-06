@@ -26,6 +26,14 @@ static void fm1_irq_on(void) {}
 static int cpu1_run(cpu1_job_t fn, uint32_t arg) { (void)fn; (void)arg; return 0; }
 static int cpu1_wait(void) { return 0; }
 static int cpu1_on(void) { return 0; }
+
+/* The standalone preview has no project store; keep the master isolator bypassed. */
+void proj_roots_audio_state(uint8_t *enabled, uint16_t gain[4])
+{
+    uint32_t i;
+    *enabled = 0;
+    for (i = 0; i < 4u; i++) gain[i] = 32768u;
+}
 static uint32_t cpu1_ticks(void) { return 0; }
 #include "../src/fx.c"
 static void fm1_delay_ms(uint32_t ms) { (void)ms; }

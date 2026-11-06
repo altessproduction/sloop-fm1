@@ -10,9 +10,9 @@
  * fill condition where absent. Damaged files are refused. Run by tests/run_tests.sh (needs build/gen). */
 #define main hostsim_main
 #include <stddef.h>
+#define PROJ_HOST 1
 #include "hostsim.c"
 #undef main
-#define PROJ_HOST 1
 static uint32_t trk_def_engine(uint32_t i)       /* ui.c TRK_DEF: ANALOG, DIGITAL, LOFI */
 {
     static const uint8_t E[NPART] = {0, 1, 3};

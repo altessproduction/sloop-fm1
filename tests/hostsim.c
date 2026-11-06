@@ -786,6 +786,17 @@ static int tracks_test(const char *dir)
     return fail;
 }
 
+/* Standalone DSP harness has no project store: the ROOTS master isolator defaults to bypass.
+ * Tests that include project.c define PROJ_HOST before hostsim.c and use its real state instead. */
+#ifndef PROJ_HOST
+void proj_roots_audio_state(uint8_t *enabled, uint16_t gain[4])
+{
+    uint32_t i;
+    *enabled = 0;
+    for (i = 0; i < 4u; i++) gain[i] = 32768u;
+}
+#endif
+
 int main(int argc, char **argv)
 {
     int eng = argc > 1 ? atoi(argv[1]) : 0, preset = argc > 2 ? atoi(argv[2]) : 4;

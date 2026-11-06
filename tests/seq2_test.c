@@ -16,10 +16,10 @@
  * Exit status: the number of failed checks. */
 #define FELUCCA_ARRANGER 1
 #define main hostsim_main
+#define PROJ_HOST 1
 #include "hostsim.c"
 #undef main
 #include <assert.h>
-#define PROJ_HOST 1
 static uint32_t trk_def_engine(uint32_t i) { return i < NPART ? i : 0; }
 #include "../firmware/src/project.c"
 static struct { uint8_t force; } ui;
@@ -359,6 +359,11 @@ static void t_chords(void)
     trk[0].p[P_CHORD] = 1;
     n = chord_notes(&trk[0], kb_map(&trk[0], 9), c); /* D4: ii (dim) */
     check(n == 3u && c[0] == 62 && c[1] == 65 && c[2] == 68, "chord TRIAD on D4 in C minor: D F Ab");
+    trk[0].p[P_SCALE] = 1;                           /* C major */
+    trk[0].p[P_CHORD] = 6;                           /* ROOTS DUB: SKANK, one key */
+    n = chord_notes(&trk[0], 60, c);
+    check(n == 4u && c[0] == 64 && c[1] == 67 && c[2] == 72 && c[3] == 74,
+          "ROOTS DUB SKANK on C4: E G C5 D5, rootless upper voicing");
     check(kb_map(&trk[0], 8) == KB_SILENT, "chord mode: the black keys are silent");
 }
 
@@ -407,6 +412,21 @@ static void t_chordplus(void)
     trk[0].p[P_AMODE] = 0;
     n = chord_play_notes(&trk[0], 60, 0, c);
     check(notes_are(c, n, 60, 64, 67, -1), "CHORD+: C4, no modifier: C E G");
+    trk[0].p[P_CHORD] = 6;
+    n = chord_play_notes(&trk[0], 60, 0, c);
+    check(notes_are(c, n, 64, 67, 72, 74), "ROOTS DUB SKANK: one C4 key voices E G C5 D5");
+    n = chord_play_notes(&trk[0], 60, CM_MINOR, c);
+    check(notes_are(c, n, 63, 67, 72, 74), "ROOTS DUB SKANK + minor modifier: Eb G C5 D5");
+    trk[0].p[P_CHORD] = 7;
+    n = chord_play_notes(&trk[0], 60, 0, c);
+    check(notes_are(c, n, 64, 67, 71, 74), "ROOTS DUB SK7: one C4 key voices E G B D");
+    trk[0].p[P_CHORD] = 8;
+    n = chord_play_notes(&trk[0], 60, 0, c);
+    check(notes_are(c, n, 64, 71, 74, 81), "ROOTS DUB SK9: one C4 key voices E B D A");
+    trk[0].p[P_CHORD] = 9;
+    n = chord_play_notes(&trk[0], 60, 0, c);
+    check(notes_are(c, n, 65, 67, 72, 74), "ROOTS DUB SKSUS: one C4 key voices F G C D");
+    trk[0].p[P_CHORD] = 1;
     n = chord_play_notes(&trk[0], 60, CM_MINOR, c);
     check(notes_are(c, n, 60, 63, 67, -1), "CHORD+: F# held: the third flips, C Eb G");
     n = chord_play_notes(&trk[0], 62, CM_MINOR, c);

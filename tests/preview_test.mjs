@@ -23,7 +23,7 @@ async function request(m, [cmd, a]) {
   const inp = [...m.access.inputs.values()][0], out = [...m.access.outputs.values()][0];
   return new Promise((resolve) => { inp.onmidimessage = ({data}) => resolve(E.unframe(data)); out.send(E.frame(cmd, a)); });
 }
-for (let engine = 0; engine < 12; engine++) {
+for (let engine = 0; engine < 13; engine++) {
   const m = device();
   await request(m, E.req.set(1, 20, engine));
   await request(m, E.req.preset(engine, 0));

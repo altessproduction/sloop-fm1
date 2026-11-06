@@ -57,6 +57,16 @@ try {
   const homeLeds = await ledState();
   if (home.lit < 100) throw new Error(`LCD did not render firmware UI (lit pixels: ${home.lit})`);
 
+  const rootsPanel = page.locator('#roots-controls');
+  await rootsPanel.waitFor();
+  const rootsToggle = rootsPanel.locator('input[type="checkbox"]');
+  const rootsBands = rootsPanel.locator('input[type="range"]');
+  if (await rootsBands.count() !== 4) throw new Error('ROOTS master isolator must expose four band gains');
+  for (let i = 0; i < 4; i++)
+    await rootsBands.nth(i).evaluate(el => { el.value = '127'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await rootsToggle.check();
+  await page.waitForTimeout(120);
+
   const key = page.locator('.pill').first();
   await key.waitFor();
   await key.dispatchEvent('pointerdown', { pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
@@ -71,17 +81,55 @@ try {
   const rms = await measureRms();
   if (!(rms > 0.00001)) throw new Error(`AudioWorklet output is silent (RMS ${rms})`);
 
-  // Keep a real note sustained and sample the output repeatedly. This catches
-  // extended silent gaps that a single RMS snapshot would miss.
-  const sustainedRms = [];
-  for (let i = 0; i < 150; i++) {
-    await page.waitForTimeout(100);
-    sustainedRms.push(await measureRms());
-  }
-  const minSustainedRms = Math.min(...sustainedRms);
-  const silentWindows = sustainedRms.filter(v => !(v > 0.00001)).length;
+  // The factory patch can decay naturally while a key remains held, so a
+  // 15-second "sustain" assertion is invalid. Re-trigger a real key once per
+  // second and measure after each attack/release cycle instead.
   await key.dispatchEvent('pointerup', { pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
-  if (silentWindows) throw new Error(`AudioWorklet had ${silentWindows} silent windows during 15-second sustained note (minimum RMS ${minSustainedRms})`);
+  const activityRms = [];
+  for (let i = 0; i < 15; i++) {
+    const pointerId = i + 2;
+    await key.dispatchEvent('pointerdown', { pointerId, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
+    await page.waitForTimeout(180);
+    activityRms.push(await measureRms());
+    await key.dispatchEvent('pointerup', { pointerId, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
+    await page.waitForTimeout(820);
+  }
+  const minActivityRms = Math.min(...activityRms);
+  const silentWindows = activityRms.filter(v => !(v > 0.00001)).length;
+  if (silentWindows) throw new Error(`AudioWorklet had ${silentWindows} silent retrigger measurements (minimum RMS ${minActivityRms})`);
+
+  /* Exercise the browser controls against the actual firmware master bus. */
+  for (let i = 0; i < 4; i++)
+    await rootsBands.nth(i).evaluate(el => { el.value = '0'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.waitForTimeout(120);
+  await key.dispatchEvent('pointerdown', { pointerId: 20, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
+  await page.waitForTimeout(180);
+  const isolatorZeroRms = await measureRms();
+  await key.dispatchEvent('pointerup', { pointerId: 20, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
+  if (isolatorZeroRms > 0.0001) throw new Error(`ROOTS isolator zero-gain did not sufficiently mute the master bus (RMS ${isolatorZeroRms})`);
+  for (let i = 0; i < 4; i++)
+    await rootsBands.nth(i).evaluate(el => { el.value = '127'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await rootsToggle.uncheck();
+  await page.waitForTimeout(120);
+  await key.dispatchEvent('pointerdown', { pointerId: 21, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
+  await page.waitForTimeout(180);
+  const isolatorRestoredRms = await measureRms();
+  await key.dispatchEvent('pointerup', { pointerId: 21, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
+  if (!(isolatorRestoredRms > 0.00001)) throw new Error('ROOTS isolator bypass did not restore master audio');
+
+  const chordMode = rootsPanel.locator('select').nth(1);
+  const skankRms = [];
+  for (const [i, mode] of ['6', '7', '8', '9'].entries()) {
+    await chordMode.selectOption(mode);        // SKANK, SK7, SK9, SKSUS on synth track 1.
+    await page.waitForTimeout(80);
+    const pointerId = 22 + i;
+    await key.dispatchEvent('pointerdown', { pointerId, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
+    await page.waitForTimeout(180);
+    skankRms.push(await measureRms());
+    await key.dispatchEvent('pointerup', { pointerId, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
+    if (!(skankRms[i] > 0.00001)) throw new Error(`One-key SKANK voicing ${mode} did not produce firmware audio`);
+  }
+  await chordMode.selectOption('0');
 
   await page.keyboard.down('6');                 // Hold GLO, then HOME locks the layer open.
   await page.waitForTimeout(80);
@@ -118,7 +166,7 @@ try {
   const returnedLeds = await ledState();
   if (returnedLeds !== homeLeds) throw new Error('HOME did not restore the normal panel LEDs after GLO');
   if (errors.length) throw new Error('Browser errors: ' + errors.join(' | '));
-  console.log(JSON.stringify({ ok: true, litPixels: home.lit, audioRms: rms, sustainedSeconds: 15, minSustainedRms, silentWindows, gloLayerLocked: true, homeUnlock: true }));
+  console.log(JSON.stringify({ ok: true, litPixels: home.lit, audioRms: rms, retriggerSeconds: 15, minActivityRms, silentWindows, isolatorZeroRms, isolatorRestoredRms, skankRms, gloLayerLocked: true, homeUnlock: true }));
 } finally {
   await browser.close();
 }

@@ -178,8 +178,8 @@ UI_SMALL static int proj_v6_ok(const project_v6_t *q)
 {
     return q->magic == PROJ_MAGIC_V6 && q->size == sizeof *q && q->sum == proj_v6_sum(q);
 }
-static uint16_t proj_roots_gain[4] = {32768u, 32768u, 32768u, 32768u};
-static uint8_t proj_roots_enabled;
+static volatile uint16_t proj_roots_gain[4] = {32768u, 32768u, 32768u, 32768u};
+static volatile uint8_t proj_roots_enabled;
 
 /* Narrow editor-facing API: gains are 7-bit on SysEx, Q15 in FUN7.
  * Caller masks IRQs around writes because the audio path may consume them.
@@ -199,6 +199,16 @@ UI_SMALL static void proj_roots_set(uint8_t enabled, const uint8_t gain[4])
         uint32_t v = gain[i] > 127u ? 127u : gain[i];
         proj_roots_gain[i] = (uint16_t)((v * 32768u + 63u) / 127u);
     }
+}
+
+/* Audio ISR snapshot. The editor and project loader update these atomically sized fields;
+ * each gain is Q15 and the audio processor applies its own 64-sample bypass ramp. */
+void proj_roots_audio_state(uint8_t *enabled, uint16_t gain[4])
+{
+    uint32_t i;
+    *enabled = proj_roots_enabled;
+    for (i = 0; i < 4u; i++)
+        gain[i] = proj_roots_gain[i];
 }
 UI_SMALL static void proj_roots_neutral(project_t *p)
 {
