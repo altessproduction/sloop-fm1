@@ -249,19 +249,20 @@ static uint32_t kb_map(const track_t *t, uint32_t k)
     return kb_pitch(t, k, song.octave);
 }
 
-/* chord mode (P_CHORD): the chord of the scale built on note n (in the scale; CHR: minor), into c[];
- * the notes it holds (<= 4, the most a step keeps) */
-static const int8_t CHORD_DEG[6][4] = {
+/* chord mode (P_CHORD): one key plays the scale chord; SKANK drops the root for a compact
+ * reggae upstroke voicing (3rd, 5th, octave, 9th). */
+static const int8_t CHORD_DEG[7][4] = {
     {0, -1, -1, -1},                     /* OFF */
     {0, 2, 4, -1},                       /* TRIAD: 1 3 5 */
     {0, 2, 4, 6},                        /* 7TH: 1 3 5 7 */
     {0, 2, 6, 8},                        /* 9TH: 1 3 7 9 (the lo-fi / R&B voicing) */
     {0, 3, 4, -1},                       /* SUS4: 1 4 5 */
     {0, -1, -1, -1},                     /* POWER: 1 5 8 (semitones, below) */
+    {2, 4, 7, 8},                        /* SKANK: 3 5 8 9, compact upper-register voicing */
 };
 static uint32_t chord_notes(const track_t *t, uint32_t n, uint8_t *c)
 {
-    uint32_t type = (uint32_t)clamp(t->p[P_CHORD], 0, 5), mask = t->p[P_SCALE] ? scale_mask(t) : SCALE_MASK[2];
+    uint32_t type = (uint32_t)clamp(t->p[P_CHORD], 0, 6), mask = t->p[P_SCALE] ? scale_mask(t) : SCALE_MASK[2];
     uint32_t k = 0, j;
     if (type == 5u) {
         static const uint8_t PW[3] = {0, 7, 12};
