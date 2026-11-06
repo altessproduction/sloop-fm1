@@ -16,6 +16,7 @@ on:
       - "tools/**"
       - "web/**"
       - ".github/workflows/roots-dub-wasm.yml"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 permissions:
   contents: read
