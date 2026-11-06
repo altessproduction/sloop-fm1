@@ -61,8 +61,8 @@ jobs:
           git clone https://github.com/joakimeriksson/fm1-emu.git /tmp/fm1-emu
           git -C /tmp/fm1-emu checkout 1c6e80a816f07f350aa8abbbce5f040992b219f3
           python3 tools/patch_fm1_emu.py /tmp/fm1-emu/web/main.js
-          bash /tmp/fm1-emu/web/build.sh public/web/fm1-emu
-          cp /tmp/fm1-emu/LICENSE public/web/fm1-emu/LICENSE-fm1-emu.txt
+          bash /tmp/fm1-emu/web/build.sh "$GITHUB_WORKSPACE/public/web/fm1-emu"
+          cp /tmp/fm1-emu/LICENSE "$GITHUB_WORKSPACE/public/web/fm1-emu/LICENSE-fm1-emu.txt"
       - name: Prepare static emulator site
         run: |
           mkdir -p public/web public/web/firmware
