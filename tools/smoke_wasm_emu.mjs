@@ -43,7 +43,15 @@ try {
     }
     return { lit, hash: hash >>> 0 };
   });
+  // GLO is a performance layer: it changes the key/button LEDs, not necessarily
+  // the LCD pixels. Test the actual panel feedback rather than expecting a new page.
+  const ledState = () => page.evaluate(() =>
+    [...document.querySelectorAll('.pill, .btn')]
+      .map(el => el.classList.contains('lit') ? 'lit' : el.classList.contains('glow') ? 'glow' : '-')
+      .join(',')
+  );
   const home = await screenState();
+  const homeLeds = await ledState();
   if (home.lit < 100) throw new Error(`LCD did not render firmware UI (lit pixels: ${home.lit})`);
 
   const key = page.locator('.pill').first();
@@ -69,13 +77,15 @@ try {
   await page.keyboard.up('6');
   await page.waitForTimeout(500);
   const mixer = await screenState();
-  if (mixer.hash === home.hash) throw new Error('GLO + HOME did not lock the GLO layer open');
+  const mixerLeds = await ledState();
+  if (mixerLeds === homeLeds) throw new Error('GLO + HOME did not change the panel LEDs to the locked GLO layer');
   await page.keyboard.down('7');                 // HOME unlocks the GLO layer.
   await page.waitForTimeout(80);
   await page.keyboard.up('7');
   await page.waitForTimeout(500);
   const returned = await screenState();
-  if (returned.hash !== home.hash) throw new Error('HOME did not unlock and leave the GLO layer');
+  const returnedLeds = await ledState();
+  if (returnedLeds !== homeLeds) throw new Error('HOME did not restore the normal panel LEDs after GLO');
   if (errors.length) throw new Error('Browser errors: ' + errors.join(' | '));
   console.log(JSON.stringify({ ok: true, litPixels: home.lit, audioRms: rms, gloLayerLocked: true, homeUnlock: true }));
 } finally {
