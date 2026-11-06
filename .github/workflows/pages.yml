@@ -7,6 +7,7 @@ on:
     paths:
       - "web/editor.html"
       - "web/roots-dub-lab.html"
+      - "web/fm1-roots-emulator.html"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -35,25 +36,26 @@ jobs:
           mkdir -p public/web
           cp web/editor.html public/web/editor.html
           cp web/roots-dub-lab.html public/web/roots-dub-lab.html
+          cp web/fm1-roots-emulator.html public/web/fm1-roots-emulator.html
           cat > public/index.html <<'EOF'
           <!doctype html>
           <html lang="fr">
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta http-equiv="refresh" content="0;url=./web/editor.html?mock=1&amp;roots=1">
-            <title>FM1 ROOTS DUB — éditeur FM1</title>
+            <meta http-equiv="refresh" content="0;url=./web/fm1-roots-emulator.html">
+            <title>FM1 ROOTS DUB — émulateur</title>
             <style>
               body{font:16px/1.5 system-ui,sans-serif;max-width:48rem;margin:12vh auto;padding:0 1.25rem;background:#101010;color:#eee}
-              a{color:#e6bd65}p{color:#bbb}
+              a{color:#c4df72}p{color:#bbb}
             </style>
           </head>
           <body>
             <h1>FM1 ROOTS DUB</h1>
-            <p>Ouverture de l’interface FM1 simulée…</p>
-            <p><a href="./web/editor.html?mock=1&amp;roots=1">Ouvrir l’éditeur FM1</a></p>
-            <p><a href="./web/roots-dub-lab.html">Ouvrir séparément le laboratoire audio (sirène et isolateur)</a></p>
-            <p>Dans l’éditeur, appuie sur Connect puis ouvre SOUND pour accéder aux réglages ROOTS DUB. Aucun FM1 physique n’est nécessaire.</p>
+            <p>Ouverture de la façade FM1 simulée…</p>
+            <p><a href="./web/fm1-roots-emulator.html">Ouvrir la façade FM1 ROOTS DUB</a></p>
+            <p><a href="./web/editor.html?mock=1&amp;roots=1">Ouvrir l’éditeur SLOOP</a></p>
+            <p><a href="./web/roots-dub-lab.html">Ouvrir le laboratoire audio (sirène et isolateur)</a></p>
           </body>
           </html>
           EOF
