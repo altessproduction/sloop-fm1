@@ -118,6 +118,7 @@ static void test_section_flash_failure(void)
 {
     project_t original, replacement;
     uint8_t raw[sizeof(project_t)];
+    uint32_t erases_before = fl_erases;
     stop_all();
     project_save(0);
     if (proj_slot[0].magic != PROJ_MAGIC) fail("section setup save failed");
@@ -129,7 +130,10 @@ static void test_section_flash_failure(void)
 
     fl_fail_at = 1; /* first page program after the alternate A/B sector has been erased */
     bk_send_exact(2, raw, sizeof raw, st_crc32(raw, sizeof raw), sizeof raw);
-    fl_fail_at = -1;
+    if (fl_fail_at != -1 || fl_erases != erases_before + 1u) {
+        fl_fail_at = -1;
+        fail("section BK_PUT did not reach the injected post-erase flash failure");
+    }
     expect_commit_rc(4, "section BK_PUT must report injected flash failure");
     if (memcmp(&original, &proj_slot[0], sizeof original))
         fail("failed section BK_PUT changed the in-RAM previous section");
