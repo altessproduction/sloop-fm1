@@ -364,6 +364,35 @@ KITS = [
         RIDE=S(None, 320, src="cym", nlev=90, ndec=2400, filt=("bp", 6500, .35), hpf=3500, click=16),
         TOMLO=S("sine", 110, 3, 30, 6, 400, 106, 1.5, 40, 20, "white", 16, 0, 40, ("lp", 2000, .1)),
         TOMHI=S("sine", 160, 3, 30, 6, 340, 104, 1.5, 40, 20, "white", 16, 0, 40, ("lp", 2500, .1)))),
+    # -- ROOTS DUB: warm one-drop kit with dry snare, woody rim and hand percussion
+    ("ROOTS", "REGGAE", 0, kit(K808,
+        KICK=S("sine", 58, 16, 34, 12, 520, 122, click=10, drive=26, filt=("lp", 1500, .12, "all")),
+        KICK2=S("sine", 48, 12, 48, 20, 720, 120, click=8, drive=22, filt=("lp", 1100, .12, "all")),
+        SNARE=S("tri", 190, 5, 14, 2, 180, 86, 1.7, 62, 18, "white", 82, 0, 180, ("bp", 2100, .22)),
+        SNARE2=S("tri", 220, 4, 12, 0, 130, 78, 1.6, 48, 20, "white", 76, 0, 130, ("bp", 2600, .25)),
+        CLAP=S(None, src="white", nlev=58, nhold=4, ndec=120, filt=("bp", 1700, .25), hpf=700),
+        CHH=S(None, src="white", nlev=76, ndec=34, filt=("bp", 6800, .25), hpf=4200),
+        OHH=S(None, src="white", nlev=78, nhold=12, ndec=220, filt=("bp", 6200, .25), hpf=3800),
+        SHAKER=S(None, src="white", nlev=100, nhold=4, ndec=42, filt=("bp", 7600, .3)),
+        CONGA=S("tri", 300, 4, 24, 3, 190, 108, 1.5, 34, 14, filt=("bp", 1800, .18)),
+        RIM=S("tri", 1450, 0, 5, 0, 28, 92, 1.5, 42, 24, "white", 24, 0, 12, ("bp", 2300, .3, "all")),
+        COWBELL=S("bell", 620, 0, 5, 4, 220, 88, filt=("bp", 2100, .3, "all")),
+        CLAVE=S("sine", 2100, 0, 5, 0, 36, 84, click=8))),
+    # -- DUB: deeper kick, springy rimshot, roomier hand percussion and long dark hats
+    ("DUB", "DUB", 0, kit(K808,
+        KICK=S("sine", 52, 20, 40, 18, 680, 124, click=12, drive=34, filt=("lp", 1250, .15, "all")),
+        KICK2=S("sine", 45, 16, 55, 24, 900, 122, click=8, drive=30, filt=("lp", 950, .15, "all")),
+        SNARE=S("tri", 175, 7, 18, 5, 260, 92, 1.8, 66, 22, "white", 92, 0, 260, ("bp", 1500, .3)),
+        SNARE2=S("tri", 205, 6, 15, 2, 190, 84, 1.7, 52, 24, "white", 84, 0, 200, ("bp", 1900, .3)),
+        CLAP=S(None, src="white", nlev=72, nhold=6, ndec=180, filt=("bp", 1250, .35), hpf=500),
+        CHH=S(None, src="white", nlev=72, ndec=48, filt=("bp", 5400, .35), hpf=3000),
+        OHH=S(None, src="white", nlev=82, nhold=18, ndec=420, filt=("bp", 5000, .35), hpf=2600),
+        SHAKER=S(None, src="white", nlev=92, nhold=8, ndec=68, filt=("bp", 6200, .35)),
+        CONGA=S("sine", 270, 5, 32, 8, 320, 112, 1.6, 38, 18, filt=("bp", 1450, .25)),
+        RIM=S("tri", 1250, 0, 5, 0, 42, 100, 1.5, 48, 28, "white", 30, 0, 18, ("bp", 1800, .38, "all")),
+        COWBELL=S("bell", 570, 0, 5, 8, 320, 92, filt=("bp", 1700, .35, "all")),
+        CLAVE=S("sine", 1900, 0, 5, 0, 46, 90, click=10))),
+
 ]
 
 

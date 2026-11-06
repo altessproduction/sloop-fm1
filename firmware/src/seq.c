@@ -326,7 +326,7 @@ static void sort_notes(uint8_t *c, uint32_t n)
 /* the chord of white key n with the modifiers held, voiced (VLEAD); its notes (<= 4) into c[] */
 static uint32_t chord_play_notes(track_t *t, uint32_t n, uint32_t mods, uint8_t *c)
 {
-    uint32_t k = chord_notes(t, n, c), j, type = (uint32_t)clamp(t->p[P_CHORD], 0, 6), part = trk_index(t);
+    uint32_t k = chord_notes(t, n, c), j, type = (uint32_t)clamp(t->p[P_CHORD], 0, 9), part = trk_index(t);
     if (type != 5u && k >= 2u && mods) {                /* (POWER: the inversion only) */
         uint32_t third = scale_up(t, n, 2u);
         for (j = 0; j < k; j++) {
@@ -3582,8 +3582,8 @@ static void events_block(uint32_t n)
 
 
 /* ROOTS DUB factory drum patterns. Loaded into the native drum track from MENU > DUB PAT.
- * Each style is a 16-step groove; hats/shakers carry the subdivisions while kick/snare keep
- * the characteristic one-drop / steppers / rockers / rocksteady / rub-a-dub pulse. */
+ * The ten 16-step grooves cover one-drop, steppers, rockers, rocksteady, rub-a-dub,
+ * dub break, nyabinghi, ska, early reggae and a sparse half-time dub. */
 static void roots_dub_pattern_hit(dstep_t *s, uint32_t lane, uint32_t level)
 {
     uint32_t sh = (lane & 3u) * 2u, b = (lane >> 2) & 3u;
@@ -3600,15 +3600,16 @@ static void roots_dub_pattern_mask(track_t *t, uint32_t lane, uint16_t mask, uin
 }
 void roots_dub_pattern_apply(uint8_t style)
 {
-    static const uint16_t kick[6]  = {0x0100u, 0x1111u, 0x1111u, 0x0101u, 0x9101u, 0x0881u};
-    static const uint16_t snare[6] = {0x0100u, 0x1010u, 0x1010u, 0x1010u, 0x8100u, 0x8100u};
-    static const uint16_t rim[6]   = {0x1010u, 0x0000u, 0x0001u, 0x1010u, 0x1010u, 0x0888u};
-    static const uint16_t hat[6]   = {0x5555u, 0x5555u, 0x5555u, 0x1111u, 0x4444u, 0x4444u};
-    static const uint16_t open[6]  = {0x0000u, 0x4040u, 0x4040u, 0x0000u, 0x0000u, 0x0000u};
-    static const uint16_t shake[6] = {0xAAAAu, 0xAAAAu, 0x2222u, 0x4444u, 0xAAAAu, 0x2222u};
-    static const uint16_t conga[6] = {0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0808u, 0x0000u};
+    static const uint16_t kick[10]  = {0x0100u,0x1111u,0x1111u,0x0101u,0x9101u,0x0881u,0x0100u,0x1111u,0x0101u,0x0100u};
+    static const uint16_t snare[10] = {0x0100u,0x1010u,0x1010u,0x1010u,0x8100u,0x8100u,0x0100u,0x1010u,0x1010u,0x0100u};
+    static const uint16_t rim[10]   = {0x1010u,0x0000u,0x0001u,0x1010u,0x1010u,0x0888u,0x4444u,0x0000u,0x1010u,0x4444u};
+    static const uint16_t hat[10]   = {0x5555u,0x5555u,0x5555u,0x1111u,0x4444u,0x4444u,0x1111u,0x5555u,0x5555u,0x1111u};
+    static const uint16_t open[10]  = {0x0000u,0x4040u,0x4040u,0x0000u,0x0000u,0x0000u,0x0000u,0x4040u,0x0000u,0x0000u};
+    static const uint16_t shake[10] = {0xAAAAu,0xAAAAu,0x2222u,0x4444u,0xAAAAu,0x2222u,0xAAAAu,0xAAAAu,0x2222u,0x2222u};
+    static const uint16_t conga[10] = {0x0000u,0x0000u,0x0000u,0x0000u,0x0808u,0x0000u,0x8888u,0x0000u,0x0808u,0x0000u};
+    static const uint16_t clave[10] = {0x0000u,0x0000u,0x0000u,0x0000u,0x0000u,0x0000u,0x2222u,0x0000u,0x0000u,0x0000u};
     track_t *t = TDRUM;
-    style %= 6u;
+    style %= 10u;
     fm1_irq_off();
     memset(t->dstep, 0, sizeof t->dstep);
     memset(t->micro, 0, sizeof t->micro);
@@ -3620,6 +3621,7 @@ void roots_dub_pattern_apply(uint8_t style)
     roots_dub_pattern_mask(t, 5u, open[style], LV_SOFT);
     roots_dub_pattern_mask(t, 13u, shake[style], LV_GHOST);
     roots_dub_pattern_mask(t, 14u, conga[style], LV_SOFT);
+    roots_dub_pattern_mask(t, 15u, clave[style], LV_GHOST);
     t->p[P_SLEN] = 16;
     t->seq_active = 1;
     t->seq_abs = SEQ_NONE;
@@ -3630,22 +3632,26 @@ void roots_dub_pattern_apply(uint8_t style)
     fm1_irq_on();
 }
 
-/* ROOTS DUB bass and offbeat skank phrase loaders. They only replace the
- * selected synth part; drum data and the other two parts remain untouched. */
+/* ROOTS DUB bass and offbeat skank phrase loaders. They only replace the selected synth part;
+ * drum data and the other two parts remain untouched. */
 void roots_dub_bass_apply(uint8_t style)
 {
-    static const uint8_t degree[4][16] = {
+    static const uint8_t degree[8][16] = {
         {0,0,0,0, 3,3,0,0, 5,5,0,0, 3,3,2,2},
         {0,0,0,0, 7,7,5,5, 3,3,0,0, 5,5,3,2},
         {0,0,0,0, 0,3,0,5, 0,0,7,5, 3,2,0,2},
-        {0,0,0,0, 5,5,3,3, 0,0,7,7, 3,2,0,2}
+        {0,0,0,0, 5,5,3,3, 0,0,7,7, 3,2,0,2},
+        {0,0,3,0, 5,0,3,0, 7,0,5,0, 3,0,2,0},
+        {0,0,0,3, 0,5,0,7, 0,3,0,5, 0,2,0,3},
+        {0,3,0,5, 0,7,0,5, 0,3,0,2, 0,5,0,3},
+        {0,0,5,0, 3,0,7,0, 5,0,3,0, 2,0,3,0}
     };
     static const uint8_t semitone[7] = {0,2,3,5,7,8,10};
     track_t *t = TSEL;
     uint32_t i;
     if (is_drum(t))
         return;
-    style %= 4u;
+    style %= 8u;
     fm1_irq_off();
     memset(t->step, 0, sizeof t->step);
     memset(t->micro, 0, sizeof t->micro);
@@ -3653,7 +3659,7 @@ void roots_dub_bass_apply(uint8_t style)
     for (i = 0; i < 16u; i++) {
         step_t *s = &t->step[i];
         uint32_t d = degree[style][i];
-        if (i == 0u || i == 4u || i == 8u || i == 12u || (d && (i & 1u) == 0u)) {
+        if (d || i == 0u || i == 4u || i == 8u || i == 12u) {
             s->note[0] = (uint8_t)clamp(36 + t->p[P_ROOT] + semitone[d % 7u], 0, 127);
             s->n = 1;
             s->time = ST_NOTE;
@@ -3672,26 +3678,30 @@ void roots_dub_bass_apply(uint8_t style)
 }
 void roots_dub_skank_apply(uint8_t style)
 {
-    static const uint16_t masks[3] = {0x4444u, 0xCCCCu, 0x444Cu};
+    static const uint16_t masks[6] = {0x4444u, 0xCCCCu, 0x444Cu, 0x2222u, 0x6666u, 0xAAAAu};
     track_t *t = TSEL;
     uint32_t i;
     if (is_drum(t))
         return;
-    style %= 3u;
+    style %= 6u;
     fm1_irq_off();
     memset(t->step, 0, sizeof t->step);
     memset(t->micro, 0, sizeof t->micro);
     memset(t->fill, 0, sizeof t->fill);
+    t->p[P_CHORD] = 6;
     for (i = 0; i < 16u; i++)
         if (masks[style] & (1u << i)) {
             step_t *s = &t->step[i];
-            s->note[0] = (uint8_t)clamp(60 + t->p[P_ROOT], 0, 127);
-            s->n = 1;
+            uint8_t chord[4];
+            uint32_t n = chord_notes(t, (uint32_t)clamp(60 + t->p[P_ROOT], 0, 127), chord);
+            uint32_t j;
+            for (j = 0; j < n && j < 4u; j++)
+                s->note[j] = chord[j];
+            s->n = (uint8_t)n;
             s->time = ST_NOTE;
             s->vel = (i & 4u) ? 92u : 108u;
             s->flags = SF_ACCENT;
         }
-    t->p[P_CHORD] = 6; /* one-key SKANK voicing */
     t->p[P_SLEN] = 16;
     t->seq_active = 1;
     t->seq_abs = SEQ_NONE;
