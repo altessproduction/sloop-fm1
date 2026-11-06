@@ -30,3 +30,18 @@ Si le site est servi directement depuis le dossier source plutôt que depuis le 
 - Pour écouter le prototype Web Audio indépendant (sirène et isolateur), ouvrir `web/roots-dub-lab.html` dans un navigateur moderne en autorisant l'audio. Ce laboratoire est distinct du moteur audio firmware.
 
 Les tests de protocole automatisés ROOTS DUB sont dans `web/test_web.mjs` (fonction `editorRoots`). Les tests de persistance FUN7 sont séparés des tests du navigateur.
+
+## Publication web
+
+Le workflow `.github/workflows/pages.yml` publie l'éditeur et le laboratoire sur GitHub Pages à chaque changement de ces deux pages sur `main`. Après fusion de la PR, activer GitHub Pages dans **Settings → Pages → Build and deployment → Source: GitHub Actions** si le dépôt ne l'utilise pas déjà.
+
+Une fois le premier déploiement terminé, la page d'accueil sera :
+`https://altessproduction.github.io/sloop-fm1/`
+
+Lien direct vers l'éditeur simulé :
+`https://altessproduction.github.io/sloop-fm1/web/editor.html?mock=1&roots=1`
+
+Lien vers le laboratoire audio :
+`https://altessproduction.github.io/sloop-fm1/web/roots-dub-lab.html`
+
+Le lien public ne sera actif qu'après fusion, activation de Pages et réussite du workflow Actions.
