@@ -161,6 +161,9 @@ static const preset_t ANALOG_PRESETS[] = {
     {"ROOTS BASS", {2, 0, 12, 0, 88, 12, 12, 0}, {0, 70, 100, 28}, 0, 1, FX(0, 0, 18, 8), XP(P_GLIDE + 1, 24, P_TRANS + 1, -12)},
     {"SKANK STAB", {1, 0, 64, 0, 104, 18, 6, 64}, {0, 42, 0, 18}, 12, 0, FX(0, 18, 32, 12)},
     {"DUB LEAD", {2, 8, 50, 0, 92, 42, 8, 64}, {3, 65, 96, 32}, 20, 1, FX(0, 12, 48, 24), XP(P_GLIDE + 1, 22)},
+    {"DUB ROUND", {3, 0, 0, 0, 110, 0, 4, 0}, {0, 68, 105, 30}, 0, 1, FX(0, 0, 18, 10), XP(P_GLIDE + 1, 30, P_TRANS + 1, -24)},
+    {"ROOTS PLUCK", {2, 0, 18, 0, 82, 12, 10, 0}, {0, 34, 0, 16}, 0, 0, FX(0, 8, 24, 16)},
+    {"ECHO LEAD", {2, 6, 48, 0, 90, 36, 8, 64}, {4, 62, 88, 42}, 18, 1, FX(0, 8, 76, 28), XP(P_GLIDE + 1, 18)},
 };
 
 /* (after Clipper 1.2) UNISON (voice.c unison_spread): both oscillators moved by r (Q32) of a turn of the note,

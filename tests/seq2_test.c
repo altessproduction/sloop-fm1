@@ -2146,6 +2146,29 @@ static void t_drdly(void)
           "2.5: GLO > DRUMS > DLY: the drums echo in the tempo delay (more with more DLY, through the FILTER too); 0: none");
 }
 
+static void t_roots_patterns(void)
+{
+    reset(120);
+    roots_dub_pattern_apply(0);
+    check(TDRUM->p[P_SLEN] == 16 && TDRUM->seq_active, "ROOTS DUB patterns: ONE DROP loads a 16-step active drum loop");
+    check(dstep_has(&TDRUM->dstep[8], 0) && dstep_has(&TDRUM->dstep[8], 2),
+          "ROOTS DUB ONE DROP: kick and snare land together on beat three");
+    check(dstep_has(&TDRUM->dstep[0], 4) && dstep_has(&TDRUM->dstep[1], 13),
+          "ROOTS DUB ONE DROP: hats and offbeat shaker fill the groove");
+    roots_dub_pattern_apply(1);
+    check(dstep_has(&TDRUM->dstep[0], 0) && dstep_has(&TDRUM->dstep[4], 0) &&
+          dstep_has(&TDRUM->dstep[8], 0) && dstep_has(&TDRUM->dstep[12], 0),
+          "ROOTS DUB STEPPERS: four-on-the-floor kick");
+    check(dstep_has(&TDRUM->dstep[4], 2) && dstep_has(&TDRUM->dstep[12], 2),
+          "ROOTS DUB STEPPERS: snare on beats two and four");
+    roots_dub_pattern_apply(4);
+    check(dstep_has(&TDRUM->dstep[3], 14) && dstep_has(&TDRUM->dstep[11], 14),
+          "ROOTS DUB RUB A DUB: syncopated conga answers");
+    roots_dub_pattern_apply(5);
+    check(dstep_has(&TDRUM->dstep[7], 0) && dstep_has(&TDRUM->dstep[11], 0) &&
+          dstep_has(&TDRUM->dstep[15], 2),
+          "ROOTS DUB BREAK: sparse kick and late snare accents");
+}
 int main(void)
 {
     t_midich();
@@ -2183,6 +2206,7 @@ int main(void)
     t_erase_undo();
     t_levels();
     t_chords();
+    t_roots_patterns();
     t_mute();
     t_chordplus();
     printf("seq2: %s\n", fails ? "FAILED" : "all checks ok");
