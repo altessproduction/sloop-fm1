@@ -22,7 +22,7 @@ SLOOP turns the FM-1 into a four-track groovebox you play live: **three synths a
 
 This branch keeps the original SLOOP engines, tracks, sequencer, projects and MIDI workflow, and adds a native reggae/dub performance layer:
 
-- **One-key SKANK chords:** set a track's CHORD mode to SKANK; one played key voices a compact, rootless 3rd–5th–octave–9th voicing, following the selected scale.
+- **One-key SKANK chords:** set a track's CHORD mode to SKANK, SK7, SK9 or SKSUS; one played key voices a scale-based, rootless reggae voicing.
 - **DUB SIREN engine:** a playable monophonic synth engine with tune, pitch sweep and sweep time, LFO rate/depth, resonant filter and the track's normal delay/reverb sends.
 - **ROOTS DUB presets:** DUB SUB, ROOTS BASS, SKANK STAB, DUB LEAD, DUB CHORD, SKANK KEYS, ORGAN BUBBLE, SKANK ORGAN, plus five siren presets.
 - **Four-band master isolator:** SUB, BASS, MID and HIGH gains with a click-free bypass ramp. The web emulator exposes controls connected to the firmware master bus; settings are stored with project saves.
