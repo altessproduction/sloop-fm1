@@ -12,6 +12,9 @@ mkdir -p "$OUT/gen"
   echo 'static const uint8_t *volatile smp_data_v = SMP_DATA_ARR;'; } > "$OUT/gen/felucca_samples.h"
 ${CC:-cc} -O1 -g -w -fsanitize=address,undefined -fno-sanitize=shift-base,signed-integer-overflow -fno-sanitize-recover=all \
     -I"$OUT/gen" -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/editor_fuzz" tests/editor_fuzz.c -lm
+${CC:-cc} -O1 -g -w -fsanitize=address,undefined -fno-sanitize=shift-base,signed-integer-overflow -fno-sanitize-recover=all \
+    -I"$OUT/gen" -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/editor_bkput_test" tests/editor_bkput_test.c -lm
+"$OUT/editor_bkput_test"
 N=${1:-20000}
 S=${2:-1}
 "$OUT/editor_fuzz" 0 $((N * 10)) "$S"        # single frames, every command, lengths at the edges

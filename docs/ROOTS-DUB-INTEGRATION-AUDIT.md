@@ -154,6 +154,8 @@ Les prototypes ont progressé depuis cet audit initial :
 
 Ces ajouts ne changent pas la décision d'intégration : aucun de ces tests n'a encore été exécuté dans un checkout complet, aucun build firmware/WASM n'a été produit et aucun essai sur FM-1 n'a eu lieu. Le LR4 reste isolé du bus master. Les contrôles web ajoutés doivent être exécutés avec `node web/test_web.mjs` dans un environnement disposant des dépendances/outils du dépôt.
 
+Vérification complémentaire : `firmware/src/core.h` définit `FS` à 44 100 Hz par défaut (avec possibilité de surcharge à la compilation), ce qui correspond aux coefficients fixes du prototype LR4. La fréquence nominale n'est donc plus une inconnue pour la configuration standard ; il reste à vérifier qu'aucune configuration de build ne surcharge `FS`, puis à mesurer le coût CPU, les crêtes et les transitoires sur la cible. Cette vérification statique ne remplace pas un build ni un essai audio.
+
 
 ### 2026-11-05 — transitions et séparation LR4
 
@@ -199,6 +201,18 @@ La relecture approfondie a retrouvé un banc d'intégration existant, plus compl
 - Le mode 1 du même fuzzer génère aussi des contenus de sauvegarde de projets et les soumet au véritable chemin BK_PUT ; il mêle objets valides, migrés, mutés et transferts interrompus.
 - `tests/editor_fuzz.sh` compile ce banc sous AddressSanitizer et UndefinedBehaviorSanitizer, puis lance notamment les modes 1 et 6.
 
-Cela invalide l'hypothèse précédente selon laquelle le chemin éditeur complet n'avait pas de banc hôte : il en existe déjà un. En revanche, la couverture reste incomplète sur quelques assertions déterministes spécifiques à ROOTS DUB : restauration BK_PUT explicite d'un FUN6, CRC de transfert incorrect avec vérification de non-modification, échec programmé de flash lors de l'écriture d'une section avec vérification de conservation de l'ancienne copie, et cas de transfert incomplet vérifié par son code de retour. Le mode fuzz peut rencontrer certains de ces cas, mais ne constitue pas à lui seul une preuve ciblée et reproductible de chacun.
+Cette découverte a permis d'ajouter une suite déterministe dédiée, décrite ci-dessous. Les scénarios ciblés ne sont donc plus seulement des travaux à faire : ils sont implémentés dans `tests/editor_bkput_test.c`, qui réutilise le banc réel. Ils restent toutefois non validés tant que la compilation et l'exécution sous ASan/UBSan n'ont pas été réalisées dans un environnement disposant des artefacts générés par `./build.sh`.
 
-La prochaine extension pertinente est donc d'ajouter ces scénarios déterministes à `tests/editor_fuzz.c` / `tests/editor_host.c`, en réutilisant les fonctions de construction de trames et le faux NOR existants. Ne pas créer un second banc de flash ni prétendre que ces scénarios sont déjà couverts. Aucun de ces tests n'a été exécuté dans cet environnement.
+### 2026-11-05 — régressions BK_PUT déterministes ajoutées
+
+Une suite dédiée `tests/editor_bkput_test.c` réutilise le banc d'intégration réel de `tests/editor_fuzz.c` / `tests/editor_host.c` et ajoute des scénarios reproductibles :
+
+- restauration SysEx d'un backup FUN6 construit avec le layout historique immuable, puis vérification de sa migration FUN7 et de l'initialisation neutre des quatre gains ROOTS ;
+- restauration SysEx FUN7 valide avec quatre gains distincts (dont zéro et unity), vérification de l'application effective des paramètres, puis remise en place du projet initial pour isoler les scénarios suivants ;
+- restauration SysEx FUN7 valide dans la section A, vérification de la mise à jour RAM et de la persistance flash des quatre gains distincts, puis restauration de la section initiale ;
+- transfert FUN7 avec CRC annoncé incorrect : le commit doit renvoyer le code 2 et le projet de travail doit rester identique ;
+- transfert FUN7 dont le CRC de transport est correct mais dont le checksum interne est invalide : le commit doit renvoyer le code 2 et le projet de travail doit rester identique ;
+- transfert incomplet : le commit doit renvoyer le code 2 et ne pas modifier le projet ;
+- restauration d'une section avec panne injectée au premier programme flash : le commit doit renvoyer le code 4, la copie RAM ne doit pas bouger et le chargement depuis flash doit retrouver l'ancienne copie A/B.
+
+Le script `tests/editor_fuzz.sh` compile et exécute désormais ce test déterministe sous AddressSanitizer et UndefinedBehaviorSanitizer avant les campagnes fuzz. Ces ajouts sont en attente de compilation/exécution dans un environnement équipé des artefacts générés par `./build.sh` ; ils ne constituent pas encore un résultat de test validé.
