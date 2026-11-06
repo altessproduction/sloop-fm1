@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: MIT
 """Patch the MIT-licensed fm1-emu web frontend to load a same-origin .fwsc by URL."""
 from pathlib import Path
 import sys
