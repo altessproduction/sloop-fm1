@@ -707,6 +707,12 @@ UI_SMALL static void select_engine(uint32_t e)
     ui.force = 1;
 }
 
+/* ROOTS DUB native menu shortcut: select the playable siren through the same safe engine path. */
+void roots_dub_select_siren(void)
+{
+    select_engine(ENGI_SIREN);
+}
+
 /* the factory presets as one list by kind (basses, keys, organs, pads, leads, plucks and bells, stabs,
  * the rest), then the used user presets: the PRESETS knob and the PRESETS page browse it. By name: an
  * engine's preset table may change order; tests/ui_pages_test.c checks every preset is here once */
