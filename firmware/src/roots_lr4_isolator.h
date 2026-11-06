@@ -83,13 +83,16 @@ static inline void roots_lr4_gain_step(roots_lr4_t *s)
 {
     unsigned i;
     if (!s->gain_ramp) {
-        for (i=0;i<4;i++)
-            if (s->gain_cur[i] != s->gain[i]) { s->gain_ramp=64u; break; }
+        for (i=0;i<4;i++) {
+            uint16_t target=s->gain[i] > 32768u ? 32768u : s->gain[i];
+            if (s->gain_cur[i] != target) { s->gain_ramp=64u; break; }
+        }
     }
     if (s->gain_ramp) {
         int32_t left=s->gain_ramp;
         for (i=0;i<4;i++) {
-            int32_t d=s->gain[i]-s->gain_cur[i];
+            int32_t target=s->gain[i] > 32768u ? 32768 : s->gain[i];
+            int32_t d=target-s->gain_cur[i];
             if (d > 0) s->gain_cur[i] = (uint16_t)(s->gain_cur[i] + (d + left - 1) / left);
             else if (d < 0) s->gain_cur[i] = (uint16_t)(s->gain_cur[i] - (-d + left - 1) / left);
         }
