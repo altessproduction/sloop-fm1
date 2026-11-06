@@ -140,6 +140,9 @@ static const preset_t DIGITAL_PRESETS[] = {
     {"TUBE BELL", {4, 6, 1, 13, 50, 90, 0, 0}, {0, 100, 0, 90}, 0, 0, FX(0, 10, 25, 50)},
     {"FM PLUCK", {4, 2, 1, 3, 70, 15, 0, 0}, {0, 78, 0, 54}, 0, 0, FX(0, 10, 28, 30)},
     {"FM GRAND", {4, 1, 2, 12, 60, 40, 10, 0}, {0, 90, 20, 60}, 0, 0, FX(0, 20, 14, 30)},
+    /* ROOTS DUB: compact chord keys and a dry, clipped offbeat patch. */
+    {"DUB CHORD", {4, 1, 2, 2, 55, 55, 0, 0}, {0, 72, 80, 55}, 0, 0, FX(0, 24, 48, 55)},
+    {"SKANK KEYS", {3, 1, 3, 5, 72, 22, 8, 0}, {0, 44, 0, 20}, 0, 0, FX(0, 12, 30, 12)},
 };
 
 /* (after Clipper 1.2) UNISON (voice.c unison_spread): the four operators moved together by r (Q32) of a turn of
