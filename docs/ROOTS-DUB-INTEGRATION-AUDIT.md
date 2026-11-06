@@ -154,6 +154,8 @@ Les prototypes ont progressé depuis cet audit initial :
 
 Ces ajouts ne changent pas la décision d'intégration : aucun de ces tests n'a encore été exécuté dans un checkout complet, aucun build firmware/WASM n'a été produit et aucun essai sur FM-1 n'a eu lieu. Le LR4 reste isolé du bus master. Les contrôles web ajoutés doivent être exécutés avec `node web/test_web.mjs` dans un environnement disposant des dépendances/outils du dépôt.
 
+Vérification complémentaire : `firmware/src/core.h` définit `FS` à 44 100 Hz par défaut (avec possibilité de surcharge à la compilation), ce qui correspond aux coefficients fixes du prototype LR4. La fréquence nominale n'est donc plus une inconnue pour la configuration standard ; il reste à vérifier qu'aucune configuration de build ne surcharge `FS`, puis à mesurer le coût CPU, les crêtes et les transitoires sur la cible. Cette vérification statique ne remplace pas un build ni un essai audio.
+
 
 ### 2026-11-05 — transitions et séparation LR4
 
