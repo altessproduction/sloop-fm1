@@ -43,6 +43,20 @@ function setRootsControls(enabled, gains) {
     rootsUi.toggle.checked = rootsState.enabled;
     rootsUi.gains.forEach((g, i) => { g.value = rootsState.gains[i]; rootsUi.values[i].textContent = rootsState.gains[i]; });
 }
+
+const chordModesByTrack = [0, 0, 0];
+let chordUi = null;
+function sendChordMode() {
+    if (node && chordUi) {
+        const track = +chordUi.track.value, mode = +chordUi.mode.value;
+        chordModesByTrack[track] = mode;
+        node.port.postMessage({ t: 'chord', track, mode });
+    }
+}
+function setChordModes(modes) {
+    for (let i = 0; i < 3; i++) chordModesByTrack[i] = modes[i] | 0;
+    if (chordUi) chordUi.mode.value = String(chordModesByTrack[+chordUi.track.value] || 0);
+}
 """
 if anchor not in s:
     raise SystemExit("could not locate master control function")
@@ -66,6 +80,24 @@ function buildRootsPanel() {
     toggle.addEventListener('change', () => { rootsState.enabled = toggle.checked; sendRoots(); });
     toggleLabel.append(toggle, document.createTextNode('ACTIVER L’ISOLATEUR'));
     panel.appendChild(toggleLabel);
+
+    const chordRow = document.createElement('div');
+    chordRow.style.cssText = 'display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0 16px;padding:12px;background:#20252c;border-radius:8px;';
+    const chordTitle = document.createElement('strong');
+    chordTitle.textContent = 'ACCORD SKANK · UNE TOUCHE';
+    chordTitle.style.cssText = 'font-size:11px;letter-spacing:1px;color:#e8b84b;margin-right:6px;';
+    const trackSelect = document.createElement('select');
+    trackSelect.style.cssText = 'background:#11151a;color:#e0e5ec;border:1px solid #454d58;border-radius:5px;padding:7px;';
+    ['SYNTH 1', 'SYNTH 2', 'SYNTH 3'].forEach((name, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = name; trackSelect.appendChild(o); });
+    const modeSelect = document.createElement('select');
+    modeSelect.style.cssText = 'background:#11151a;color:#e0e5ec;border:1px solid #454d58;border-radius:5px;padding:7px;';
+    ['OFF', 'TRIAD', '7TH', '9TH', 'SUS4', 'POWER', 'SKANK', 'SK7', 'SK9', 'SKSUS'].forEach((name, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = name; modeSelect.appendChild(o); });
+    chordRow.append(chordTitle, trackSelect, modeSelect);
+    panel.appendChild(chordRow);
+    chordUi = { track: trackSelect, mode: modeSelect };
+    trackSelect.addEventListener('change', () => setChordModes(chordModesByTrack));
+    modeSelect.addEventListener('change', sendChordMode);
+
     const grid = document.createElement('div');
     grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px 18px;';
     const labels = ['SUB', 'BASS', 'MID', 'HIGH'];
@@ -103,14 +135,14 @@ if "function buildRootsPanel()" not in s:
     s = s.replace(panel_anchor, panel + panel_anchor, 1)
 
 old_msg = "        else if (m.t === 'flash') saveFlash(m.data);"
-new_msg = old_msg + "\n        else if (m.t === 'roots-state') setRootsControls(m.enabled, m.gains);"
+new_msg = old_msg + "\n        else if (m.t === 'roots-state') setRootsControls(m.enabled, m.gains);\n        else if (m.t === 'chord-state') setChordModes(m.modes);"
 if old_msg not in s:
     raise SystemExit("could not locate flash message handler")
 if "roots-state" not in s:
     s = s.replace(old_msg, new_msg, 1)
 
 old_conn = "    node.connect(ctx.destination);\n    await ctx.resume();\n    sendMaster();"
-new_conn = "    node.connect(ctx.destination);\n    node.port.postMessage({ t: 'roots-get' });\n    await ctx.resume();\n    sendMaster();"
+new_conn = "    node.connect(ctx.destination);\n    node.port.postMessage({ t: 'roots-get' });\n    node.port.postMessage({ t: 'chord-get' });\n    await ctx.resume();\n    sendMaster();"
 if old_conn not in s:
     raise SystemExit("could not locate audio node connection")
 if "t: 'roots-get'" not in s:
@@ -132,6 +164,8 @@ new = """            else if (m.t === 'adc') this.e.emu_adc_set(m.ch, m.v);
             else if (m.t === 'roots') this.e.emu_roots_set(m.enabled ? 1 : 0, m.gains[0], m.gains[1], m.gains[2], m.gains[3]);
             else if (m.t === 'roots-get') this.port.postMessage({ t: 'roots-state', enabled: !!this.e.emu_roots_get(0),
                 gains: [1, 2, 3, 4].map(i => this.e.emu_roots_get(i)) });
+            else if (m.t === 'chord') this.e.emu_chord_set(m.track, m.mode);
+            else if (m.t === 'chord-get') this.port.postMessage({ t: 'chord-state', modes: [0, 1, 2].map(i => this.e.emu_chord_get(i)) });
             else if (m.t === 'midi') this.e.emu_midi(m.p);"""
 if old not in w:
     raise SystemExit("could not locate worklet message handler")
