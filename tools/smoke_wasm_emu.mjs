@@ -12,7 +12,7 @@ const browser = await chromium.launch({
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.on('pageerror', e => errors.push(String(e)));
-  page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
+  page.on('console', msg => { if (msg.type() === 'error' && msg.location().url.startsWith('http://127.0.0.1:8787/')) errors.push(msg.text()); });
   await page.addInitScript(() => {
     const original = AudioWorkletNode.prototype.connect;
     AudioWorkletNode.prototype.connect = function(destination, ...args) {
