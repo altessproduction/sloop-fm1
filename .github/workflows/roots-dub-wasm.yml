@@ -33,8 +33,28 @@ jobs:
       - name: Verify the WebAssembly module and shell
         run: |
           test -s build/sloop-web-emu/dist/sloop.wasm
+          test -s build/sloop-web-emu/dist/index.html
+          test -s build/sloop-web-emu/dist/worklet.js
           file build/sloop-web-emu/dist/sloop.wasm
           ls -lh build/sloop-web-emu/dist/sloop.wasm
+      - name: Install browser smoke-test runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Chromium and Playwright
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Boot ROOTS DUB in Chromium and verify LCD plus audio output
+        run: |
+          python3 -m http.server 8787 --directory build/sloop-web-emu/dist >/tmp/roots-dub-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8787/ >/dev/null; then break; fi
+            sleep 1
+          done
+          node tools/smoke_wasm_emu.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: roots-dub-webassembly-emulator
