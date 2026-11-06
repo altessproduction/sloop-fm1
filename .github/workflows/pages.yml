@@ -1,9 +1,7 @@
-name: Publish ROOTS DUB web emulator
-# Requires GitHub Pages to be enabled in repository Settings > Pages (Source: GitHub Actions).
-
+name: Publish ROOTS DUB SLOOP WebAssembly emulator
 on:
   workflow_run:
-    workflows: ["Build complete FM-1 firmware"]
+    workflows: ["ROOTS DUB WebAssembly emulator"]
     types: [completed]
     branches: [main]
 
@@ -24,80 +22,35 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
     steps:
-      - name: Check out the exact source used for the firmware build
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Download the tested ROOTS DUB browser emulator
+        uses: actions/download-artifact@v4
+        with:
+          name: roots-dub-webassembly-emulator
+          path: public/roots-dub
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - name: Verify the browser emulator payload
+        run: |
+          test -s public/roots-dub/index.html
+          test -s public/roots-dub/sloop.wasm
+          test -s public/roots-dub/worklet.js
+      - name: Keep the existing project landing page and tools
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-      - name: Download the exact firmware package from the successful build
-        uses: actions/download-artifact@v4
-        with:
-          name: sloop-roots-dub-fm1-fwsc
-          path: build
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ github.token }}
-      - name: Verify the firmware package is present
-        run: test -s build/felucca.fwsc
-      - name: Install WebAssembly build dependencies
+      - name: Preserve existing published tools and add ROOTS DUB link
         run: |
-          sudo apt-get update
-          sudo apt-get install -y clang lld git python3-pip
-          python3 -m pip install --break-system-packages Pillow
-      - name: Build the SLOOP DSP preview
-        run: python3 tools/build_preview.py
-      - name: Install Rust WebAssembly target
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-      - name: Fetch and build the full FM-1 hardware emulator
-        run: |
-          git clone https://github.com/joakimeriksson/fm1-emu.git /tmp/fm1-emu
-          git -C /tmp/fm1-emu checkout 1c6e80a816f07f350aa8abbbce5f040992b219f3
-          python3 tools/patch_fm1_emu.py /tmp/fm1-emu/web/main.js
-          bash /tmp/fm1-emu/web/build.sh "$GITHUB_WORKSPACE/public/web/fm1-emu"
-          cp /tmp/fm1-emu/LICENSE "$GITHUB_WORKSPACE/public/web/fm1-emu/LICENSE-fm1-emu.txt"
-      - name: Set up Node.js for the WebAssembly smoke test
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Boot our exact package in the browser's FM-1 WebAssembly emulator
-        run: node /tmp/fm1-emu/web/smoke.mjs "$GITHUB_WORKSPACE/public/web/fm1-emu" "$GITHUB_WORKSPACE/build/felucca.fwsc"
-      - name: Prepare static emulator site
-        run: |
-          mkdir -p public/web public/web/firmware
-          cp build/felucca.fwsc public/web/firmware/roots-dub.fwsc
-          cp web/editor.html public/web/editor.html
-          cp web/fukiai.ttf public/web/fukiai.ttf
-          cp web/FUKIAI-LICENSE.txt public/web/FUKIAI-LICENSE.txt
-          cp web/roots-dub-lab.html public/web/roots-dub-lab.html
-          cp web/fm1-roots-emulator.html public/web/fm1-roots-emulator.html
-          cp web/preview.js public/web/preview.js
-          cp web/preview-worklet.js public/web/preview-worklet.js
-          cp build/preview/sloop-preview.wasm public/web/sloop-preview.wasm
-          cat > public/index.html <<'EOF'
-          <!doctype html>
-          <html lang="fr">
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta http-equiv="refresh" content="0;url=./web/fm1-roots-emulator.html">
-            <title>FM1 ROOTS DUB — émulateur</title>
-            <style>
-              body{font:16px/1.5 system-ui,sans-serif;max-width:48rem;margin:12vh auto;padding:0 1.25rem;background:#101010;color:#eee}
-              a{color:#c4df72}p{color:#bbb}
-            </style>
-          </head>
-          <body>
-            <h1>FM1 ROOTS DUB</h1>
-            <p>Ouverture de la façade FM1 simulée…</p>
-            <p><a href="./web/fm1-roots-emulator.html">Ouvrir la façade FM1 ROOTS DUB</a></p>
-            <p><a href="./web/editor.html?mock=1&amp;roots=1">Ouvrir l’éditeur SLOOP</a></p>
-            <p><a href="./web/roots-dub-lab.html">Ouvrir le laboratoire audio (sirène et isolateur)</a></p>
-          </body>
-          </html>
+          mkdir -p public
+          if [ -f index.html ]; then cp index.html public/index.html; fi
+          if [ -d web ]; then cp -R web public/web; fi
+          cat > public/roots-dub/README.txt <<'EOF'
+          SLOOP ROOTS DUB browser emulator.
+          This directory contains the tested SLOOP WebAssembly AudioWorklet build.
+          Firmware sources and browser HAL are GPL-3.0-only.
+          Upstream browser emulator: https://github.com/sabliran/sloop-web-emu
           EOF
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
