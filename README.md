@@ -26,8 +26,9 @@ This branch keeps the original SLOOP engines, tracks, sequencer, projects and MI
 - **DUB SIREN engine:** a playable monophonic synth engine with tune, pitch sweep and sweep time, LFO rate/depth, resonant filter and the track's normal delay/reverb sends.
 - **ROOTS DUB presets:** DUB SUB, ROOTS BASS, SKANK STAB, DUB LEAD, DUB CHORD, SKANK KEYS, ORGAN BUBBLE, SKANK ORGAN, plus five siren presets.
 - **Four-band master isolator:** SUB, BASS, MID and HIGH gains with a click-free bypass ramp. The web emulator exposes four-band master controls and a per-synth SKANK voicing selector connected to the firmware; settings are stored with project saves.
+- **Native ROOTS DUB patterns:** six drum grooves (ONE DROP, STEPPERS, ROCKERS, ROCKSTEADY, RUB A DUB, DUB BREAK), four bass phrases (ROOTS, WALKING, STEPPERS, ROCKERS) and three offbeat skank phrases (OFFBEAT, DOUBLE, ROCKERS), loaded from the FM-1 menu onto the selected track.
 
-The ROOTS DUB changes are being validated on a separate branch before any merge or release. See the [native regression workflow](https://github.com/altessproduction/sloop-fm1/actions/workflows/roots-dub-host.yml) and [emulator build workflow](https://github.com/altessproduction/sloop-fm1/actions/workflows/roots-dub-wasm.yml).
+ROOTS DUB is integrated on `main`. The merged native UI, bass/skank phrase loaders and siren presets passed the pull-request regression, firmware and WebAssembly builds; the post-merge build is running now. The browser emulator is published separately after its WebAssembly smoke test succeeds. This is a software validation only, not a physical FM-1 hardware test.
 
 ---
 
