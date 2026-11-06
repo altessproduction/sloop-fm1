@@ -87,6 +87,10 @@ function buildRootsPanel() {
     note.textContent = 'Commandes reliées à l’isolateur quatre bandes du bus master du firmware. Les réglages sont conservés avec le projet lors de son enregistrement.';
     note.style.cssText = 'margin-top:13px;color:#7f8996;font-size:11px;line-height:1.5;';
     panel.appendChild(note);
+    const play = document.createElement('p');
+    play.textContent = 'SKANK À UNE TOUCHE : régler CHORD = SKANK sur la piste, puis jouer une seule note. SIREN DUB : choisir le moteur SIREN et l’un de ses presets ; les pages moteur règlent TUNE, SWEEP, TIME, LFO, DEPTH, CUT, RES et WAVE. L’écho utilise le send DLY de la piste. Presets ROOTS DUB : DUB SUB, ROOTS BASS, SKANK STAB, DUB LEAD, DUB CHORD, SKANK KEYS et ORGAN BUBBLE.';
+    play.style.cssText = 'margin-top:9px;color:#aeb6c2;font-size:11px;line-height:1.6;';
+    panel.appendChild(play);
     device.after(panel);
     rootsUi = { toggle, gains, values };
     setRootsControls(rootsState.enabled, rootsState.gains);
