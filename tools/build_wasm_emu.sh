@@ -23,4 +23,5 @@ python3 "$ROOT/tools/patch_sloop_wasm.py" "$EMU/src/sloop_wasm.c"
 (
   cd "$EMU"
   SLOOP="$ROOT" FELUCCA="$ROOT/build/no-felucca" sh ./build.sh
+  cp LICENSE dist/LICENSE-sloop-web-emu.txt
 )
