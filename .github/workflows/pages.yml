@@ -7,6 +7,7 @@ on:
 permissions:
   actions: read
   contents: read
+  deployments: write
   pages: write
   id-token: write
 
@@ -62,6 +63,25 @@ jobs:
         with:
           name: roots-dub-pages-${{ github.event.workflow_run.id }}
           path: public
+      - name: Retire stale GitHub Pages deployments
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/deployments?environment=github-pages&per_page=100" | jq -s 'add' > /tmp/pages-deployments.json
+          jq -c --arg sha "$CURRENT_SHA" '.[] | select(.sha != $sha) | {id: .id, sha: .sha}' /tmp/pages-deployments.json |
+          while read -r deployment; do
+            id=$(jq -r '.id' <<< "$deployment")
+            statuses=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/deployments/${id}/statuses?per_page=100" | jq -s 'add')
+            state=$(jq -r '.[0].state // empty' <<< "$statuses")
+            if [ "$state" = "in_progress" ] || [ "$state" = "queued" ]; then
+              echo "Retiring stale Pages deployment $id ($(jq -r '.sha' <<< "$deployment"))"
+              gh api --method POST "repos/${GITHUB_REPOSITORY}/deployments/${id}/statuses" \
+                -f state=inactive \
+                -f description="Superseded by ROOTS DUB build $CURRENT_SHA" >/dev/null
+            fi
+          done
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
