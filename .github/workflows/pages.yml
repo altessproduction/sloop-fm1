@@ -13,7 +13,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -66,20 +66,21 @@ jobs:
       - name: Retire stale GitHub Pages deployments
         env:
           GH_TOKEN: ${{ github.token }}
-          CURRENT_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
           gh api --paginate "repos/${GITHUB_REPOSITORY}/deployments?environment=github-pages&per_page=100" | jq -s 'add' > /tmp/pages-deployments.json
-          jq -c --arg sha "$CURRENT_SHA" '.[] | select(.sha != $sha) | {id: .id, sha: .sha}' /tmp/pages-deployments.json |
+          # A previous deploy-pages job can leave a same-SHA deployment pending.
+          # Retire every queued/in-progress Pages deployment before creating this one.
+          jq -c '.[] | {id: .id, sha: .sha}' /tmp/pages-deployments.json |
           while read -r deployment; do
             id=$(jq -r '.id' <<< "$deployment")
             statuses=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/deployments/${id}/statuses?per_page=100" | jq -s 'add')
             state=$(jq -r '.[0].state // empty' <<< "$statuses")
             if [ "$state" = "in_progress" ] || [ "$state" = "queued" ]; then
-              echo "Retiring stale Pages deployment $id ($(jq -r '.sha' <<< "$deployment"))"
+              echo "Retiring pending Pages deployment $id ($(jq -r '.sha' <<< "$deployment"))"
               gh api --method POST "repos/${GITHUB_REPOSITORY}/deployments/${id}/statuses" \
                 -f state=inactive \
-                -f description="Superseded by ROOTS DUB build $CURRENT_SHA" >/dev/null
+                -f description="Superseded by the latest ROOTS DUB Pages deployment" >/dev/null
             fi
           done
       - name: Deploy to GitHub Pages
