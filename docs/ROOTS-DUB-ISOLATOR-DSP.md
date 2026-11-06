@@ -53,8 +53,12 @@ avant toute intégration.
   d'échantillonnage n'est géré.
 - Les contrôles utilisateur (éditeur web v13, commandes SysEx 78/79) et la
   persistance FUN7 sont implémentés, mais ils ne pilotent pas encore ce module.
-- Les rampes de gain par bande ne sont pas implémentées : un changement de gain
-  en cours de traitement peut donc produire un clic après raccordement.
+- Chaque gain de bande dispose maintenant d'une cible Q15 et d'une valeur courante
+  lissée sur 64 échantillons. Les quatre transitions sont monotones et atteignent
+  exactement leur cible au 64e échantillon ; le test hôte vérifie les pas maximaux
+  (512 unités Q15 pour une transition 0..32768) et l'arrivée exacte aux deux extrêmes.
+  Cette rampe limite les clics de commande, mais ne remplace pas les mesures de
+  crêtes/headroom lorsque plusieurs bandes sont remontées simultanément.
 - Le raccordement au bus maître reste volontairement non implémenté.
 
 ## Tests
