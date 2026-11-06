@@ -3579,3 +3579,53 @@ static void events_block(uint32_t n)
 #endif
     }
 }
+
+
+/* ROOTS DUB factory drum patterns. Loaded into the native drum track from MENU > DUB PAT.
+ * Each style is a 16-step groove; hats/shakers carry the subdivisions while kick/snare keep
+ * the characteristic one-drop / steppers / rockers / rocksteady / rub-a-dub pulse. */
+static void roots_dub_pattern_hit(dstep_t *s, uint32_t lane, uint32_t level)
+{
+    uint32_t sh = (lane & 3u) * 2u, b = (lane >> 2) & 3u;
+    s->on[(lane >> 3) & 1u] |= (uint8_t)(1u << (lane & 7u));
+    s->lvl[b] = (uint8_t)((s->lvl[b] & ~(3u << sh)) | ((level & 3u) << sh));
+    s->rat[b] &= (uint8_t)~(3u << sh);
+}
+static void roots_dub_pattern_mask(track_t *t, uint32_t lane, uint16_t mask, uint32_t level)
+{
+    uint32_t i;
+    for (i = 0; i < 16u; i++)
+        if (mask & (1u << i))
+            roots_dub_pattern_hit(&t->dstep[i], lane, level);
+}
+void roots_dub_pattern_apply(uint8_t style)
+{
+    static const uint16_t kick[6]  = {0x0100u, 0x1111u, 0x1111u, 0x0101u, 0x9101u, 0x0881u};
+    static const uint16_t snare[6] = {0x0100u, 0x1010u, 0x1010u, 0x1010u, 0x8100u, 0x8100u};
+    static const uint16_t rim[6]   = {0x1010u, 0x0000u, 0x0001u, 0x1010u, 0x1010u, 0x0888u};
+    static const uint16_t hat[6]   = {0x5555u, 0x5555u, 0x5555u, 0x1111u, 0x4444u, 0x4444u};
+    static const uint16_t open[6]  = {0x0000u, 0x4040u, 0x4040u, 0x0000u, 0x0000u, 0x0000u};
+    static const uint16_t shake[6] = {0xAAAAu, 0xAAAAu, 0x2222u, 0x4444u, 0xAAAAu, 0x2222u};
+    static const uint16_t conga[6] = {0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0808u, 0x0000u};
+    track_t *t = TDRUM;
+    style %= 6u;
+    fm1_irq_off();
+    memset(t->dstep, 0, sizeof t->dstep);
+    memset(t->micro, 0, sizeof t->micro);
+    memset(t->fill, 0, sizeof t->fill);
+    roots_dub_pattern_mask(t, 0u, kick[style], LV_NORM);
+    roots_dub_pattern_mask(t, 2u, snare[style], LV_NORM);
+    roots_dub_pattern_mask(t, 7u, rim[style], LV_GHOST);
+    roots_dub_pattern_mask(t, 4u, hat[style], LV_GHOST);
+    roots_dub_pattern_mask(t, 5u, open[style], LV_SOFT);
+    roots_dub_pattern_mask(t, 13u, shake[style], LV_GHOST);
+    roots_dub_pattern_mask(t, 14u, conga[style], LV_SOFT);
+    t->p[P_SLEN] = 16;
+    t->seq_active = 1;
+    t->seq_abs = SEQ_NONE;
+    t->seq_idx = 0;
+    t->seq_skip = 0;
+    t->rskip_lanes = 0;
+    t->p[P_SSWING] = 0;
+    fm1_irq_on();
+}
