@@ -17,7 +17,8 @@ typedef struct {
 typedef struct {
     roots_lr4_biquad_state_t lp[3][2], hp[3][2];
     roots_lr4_biquad_state_t allpass[3]; /* SUB@350, SUB@2500, BASS@2500 */
-    int32_t gain[4]; /* Q15, unity = 32768 */
+    int32_t gain[4]; /* current Q15 gain */
+    uint8_t target[4]; /* 0..127, slewed to over at most 64 samples */
     uint16_t wet; /* Q15 dry/wet transition, 64-sample ramp */
     uint8_t enabled, running;
 } roots_lr4_t;
@@ -79,6 +80,7 @@ static inline void roots_lr4_init(roots_lr4_t *s)
         s->allpass[i].x1=s->allpass[i].x2=s->allpass[i].y1=s->allpass[i].y2=0;
     }
     s->gain[0]=s->gain[1]=s->gain[2]=s->gain[3]=32768;
+    s->target[0]=s->target[1]=s->target[2]=s->target[3]=127;
     s->wet=0; s->enabled=0; s->running=0;
 }
 
@@ -115,7 +117,14 @@ static inline int32_t roots_lr4_process(roots_lr4_t *s, int32_t input)
     bands[0]=roots_lr4_allpass(bands[0],&s->allpass[0],&roots_lr4_ap_coeff[1]);
     bands[0]=roots_lr4_allpass(bands[0],&s->allpass[1],&roots_lr4_ap_coeff[2]);
     bands[1]=roots_lr4_allpass(bands[1],&s->allpass[2],&roots_lr4_ap_coeff[2]);
-    for (i=0;i<4;i++) mix+=(int64_t)bands[i]*s->gain[i];
+    for (i=0;i<4;i++) {
+        int32_t target_q15 = ((int32_t)s->target[i] * 32768 + 63) / 127;
+        int32_t delta = target_q15 - s->gain[i];
+        if (delta > 512) delta = 512;
+        else if (delta < -512) delta = -512;
+        s->gain[i] += delta;
+        mix += (int64_t)bands[i] * s->gain[i];
+    }
     filtered=roots_lr4_sat(mix >> 15);
     if (s->enabled) s->wet = s->wet > 32255u ? 32768u : (uint16_t)(s->wet + 512u);
     else s->wet = s->wet < 512u ? 0u : (uint16_t)(s->wet - 512u);
