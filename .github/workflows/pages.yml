@@ -47,6 +47,8 @@ jobs:
         run: |
           mkdir -p public/web
           cp web/editor.html public/web/editor.html
+          cp web/fukiai.ttf public/web/fukiai.ttf
+          cp web/FUKIAI-LICENSE.txt public/web/FUKIAI-LICENSE.txt
           cp web/roots-dub-lab.html public/web/roots-dub-lab.html
           cp web/fm1-roots-emulator.html public/web/fm1-roots-emulator.html
           cp web/preview.js public/web/preview.js
