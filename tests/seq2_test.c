@@ -16,10 +16,10 @@
  * Exit status: the number of failed checks. */
 #define FELUCCA_ARRANGER 1
 #define main hostsim_main
+#define PROJ_HOST 1
 #include "hostsim.c"
 #undef main
 #include <assert.h>
-#define PROJ_HOST 1
 static uint32_t trk_def_engine(uint32_t i) { return i < NPART ? i : 0; }
 #include "../firmware/src/project.c"
 static struct { uint8_t force; } ui;
