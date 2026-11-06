@@ -26,6 +26,6 @@ jobs:
         run: python3 tools/patch_fm1_emu.py /tmp/fm1-emu/web/main.js
       - name: Build the full FM-1 emulator for WebAssembly
         run: |
-          sh /tmp/fm1-emu/web/build.sh /tmp/fm1-emu-dist
+          bash /tmp/fm1-emu/web/build.sh /tmp/fm1-emu-dist
           test -s /tmp/fm1-emu-dist/fm1_web.wasm
           test -s /tmp/fm1-emu-dist/main.js
