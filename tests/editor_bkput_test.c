@@ -116,12 +116,15 @@ static void test_fun6_migration(void)
 
 static void test_section_flash_failure(void)
 {
-    project_t original, replacement;
+    project_t original, replacement, persisted;
     uint8_t raw[sizeof(project_t)];
     uint32_t erases_before;
     stop_all();
     project_save(0);
-    if (proj_slot[0].magic != PROJ_MAGIC) fail("section setup save failed");
+    if (!flash_ok || proj_slot[0].magic != PROJ_MAGIC) fail("section setup save failed");
+    if (st_load(OBJ_PROJECT0, &persisted, sizeof persisted) != (int)sizeof persisted ||
+        memcmp(&persisted, &proj_slot[0], sizeof persisted))
+        fail("section setup was not committed to the simulated NOR");
     memcpy(&original, &proj_slot[0], sizeof original);
     erases_before = fl_erases;
     proj_capture(&replacement);
