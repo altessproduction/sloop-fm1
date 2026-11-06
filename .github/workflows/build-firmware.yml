@@ -37,7 +37,20 @@ jobs:
           python3 -m pip install --break-system-packages Pillow
       - name: Fetch JieLi AC79 SDK
         run: |
-          git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git "$HOME/fw-AC79_AIoT_SDK"
+          set -e
+          SDK_DIR="$HOME/fw-AC79_AIoT_SDK"
+          SDK_URL="https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git"
+          SDK_TAG="AC79NN_SDK_V1.2.1_2023-12-13"
+          for attempt in 1 2 3 4; do
+            rm -rf "$SDK_DIR"
+            if git -c http.version=HTTP/1.1 clone --depth 1 --single-branch --branch "$SDK_TAG" "$SDK_URL" "$SDK_DIR"; then
+              exit 0
+            fi
+            echo "SDK clone attempt $attempt failed; retrying after network backoff."
+            sleep $((attempt * 8))
+          done
+          echo "Unable to fetch the JieLi SDK after four attempts."
+          exit 1
       - name: Install JieLi pi32v2 toolchain
         run: sh tools/get_toolchain.sh
       - name: Build installable FM-1 firmware package
