@@ -3629,3 +3629,73 @@ void roots_dub_pattern_apply(uint8_t style)
     t->p[P_SSWING] = 0;
     fm1_irq_on();
 }
+
+/* ROOTS DUB bass and offbeat skank phrase loaders. They only replace the
+ * selected synth part; drum data and the other two parts remain untouched. */
+void roots_dub_bass_apply(uint8_t style)
+{
+    static const uint8_t degree[4][16] = {
+        {0,0,0,0, 3,3,0,0, 5,5,0,0, 3,3,2,2},
+        {0,0,0,0, 7,7,5,5, 3,3,0,0, 5,5,3,2},
+        {0,0,0,0, 0,3,0,5, 0,0,7,5, 3,2,0,2},
+        {0,0,0,0, 5,5,3,3, 0,0,7,7, 3,2,0,2}
+    };
+    static const uint8_t semitone[7] = {0,2,3,5,7,8,10};
+    track_t *t = TSEL;
+    uint32_t i;
+    if (is_drum(t))
+        return;
+    style %= 4u;
+    fm1_irq_off();
+    memset(t->step, 0, sizeof t->step);
+    memset(t->micro, 0, sizeof t->micro);
+    memset(t->fill, 0, sizeof t->fill);
+    for (i = 0; i < 16u; i++) {
+        step_t *s = &t->step[i];
+        uint32_t d = degree[style][i];
+        if (i == 0u || i == 4u || i == 8u || i == 12u || (d && (i & 1u) == 0u)) {
+            s->note[0] = (uint8_t)clamp(36 + t->p[P_ROOT] + semitone[d % 7u], 0, 127);
+            s->n = 1;
+            s->time = ST_NOTE;
+            s->vel = (i & 3u) ? 88u : 112u;
+            if (i == 0u || i == 8u)
+                s->flags |= SF_ACCENT;
+        }
+    }
+    t->p[P_CHORD] = 0;
+    t->p[P_SLEN] = 16;
+    t->seq_active = 1;
+    t->seq_abs = SEQ_NONE;
+    t->seq_idx = 0;
+    t->seq_skip = 0;
+    fm1_irq_on();
+}
+void roots_dub_skank_apply(uint8_t style)
+{
+    static const uint16_t masks[3] = {0x4444u, 0xCCCCu, 0x444Cu};
+    track_t *t = TSEL;
+    uint32_t i;
+    if (is_drum(t))
+        return;
+    style %= 3u;
+    fm1_irq_off();
+    memset(t->step, 0, sizeof t->step);
+    memset(t->micro, 0, sizeof t->micro);
+    memset(t->fill, 0, sizeof t->fill);
+    for (i = 0; i < 16u; i++)
+        if (masks[style] & (1u << i)) {
+            step_t *s = &t->step[i];
+            s->note[0] = (uint8_t)clamp(60 + t->p[P_ROOT], 0, 127);
+            s->n = 1;
+            s->time = ST_NOTE;
+            s->vel = (i & 4u) ? 92u : 108u;
+            s->flags = SF_ACCENT;
+        }
+    t->p[P_CHORD] = 6; /* one-key SKANK voicing */
+    t->p[P_SLEN] = 16;
+    t->seq_active = 1;
+    t->seq_abs = SEQ_NONE;
+    t->seq_idx = 0;
+    t->seq_skip = 0;
+    fm1_irq_on();
+}
