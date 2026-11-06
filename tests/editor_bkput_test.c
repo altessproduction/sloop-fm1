@@ -85,6 +85,34 @@ static void test_bad_crc_and_incomplete(void)
     if (memcmp(&before, &after, sizeof before)) fail("incomplete BK_PUT changed the working project");
 }
 
+static void test_out_of_order_and_abort(void)
+{
+    project_t before, after;
+    uint8_t raw[sizeof(project_t)];
+    uint8_t a[320];
+    uint32_t len = sizeof(project_t), n;
+    stop_all();
+    proj_capture(&before);
+    memcpy(raw, &before, len);
+
+    a[0] = 0; a[1] = 0; put5(a + 2, len); put5(a + 7, st_crc32(raw, len));
+    cmdv(ED_BK_PUT, a, 12);
+    if (rx_n < 8 || rx_last[7] != 0) fail("out-of-order transfer begin");
+
+    /* The protocol accepts only the exact next offset; this must not advance staging. */
+    a[0] = 1; a[1] = 0; put5(a + 2, 1);
+    n = 7u + pack7(a + 7, raw, 128u);
+    cmdv(ED_BK_PUT, a, n);
+    if (rx_n < 8 || rx_last[7] != 1) fail("out-of-order BK_PUT chunk must be rejected");
+
+    a[0] = 3; a[1] = 0; cmdv(ED_BK_PUT, a, 2);
+    if (rx_n < 8 || rx_last[5] != 3 || rx_last[7] != 0)
+        fail("BK_PUT abort must close the staged transfer");
+    proj_capture(&after);
+    if (memcmp(&before, &after, sizeof before))
+        fail("out-of-order/aborted BK_PUT changed the working project");
+}
+
 static void test_fun6_migration(void)
 {
     project_t current, restored;
@@ -153,6 +181,7 @@ int main(void)
     harness_init();
     after();
     test_bad_crc_and_incomplete();
+    test_out_of_order_and_abort();
     test_fun6_migration();
     test_section_flash_failure();
     puts("deterministic BK_PUT integration tests passed");
