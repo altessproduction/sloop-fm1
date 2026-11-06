@@ -1,0 +1,43 @@
+name: Browser firmware DSP preview
+on:
+  pull_request:
+    paths:
+      - "firmware/src/**"
+      - "firmware/host/**"
+      - "tools/**"
+      - "assets/**"
+      - "web/preview.js"
+      - "web/preview-worklet.js"
+      - "tests/preview_*"
+      - "tests/run_preview_tests.sh"
+      - ".github/workflows/preview.yml"
+  push:
+    branches: [main]
+    paths:
+      - "firmware/src/**"
+      - "firmware/host/**"
+      - "tools/**"
+      - "assets/**"
+      - "web/preview.js"
+      - "web/preview-worklet.js"
+      - "tests/preview_*"
+      - "tests/run_preview_tests.sh"
+      - ".github/workflows/preview.yml"
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install WebAssembly compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld
+      - name: Build firmware DSP for WebAssembly
+        run: python3 tools/build_preview.py
+      - name: Test browser DSP against native firmware adapter
+        run: tests/run_preview_tests.sh
