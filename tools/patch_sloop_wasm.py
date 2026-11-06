@@ -75,6 +75,18 @@ WASM_EXPORT("emu_roots_get") uint32_t emu_roots_get(uint32_t index)
     proj_roots_get(&enabled, gain);
     return index == 0u ? enabled : (index <= 4u ? gain[index - 1u] : 0u);
 }
+WASM_EXPORT("emu_chord_set") void emu_chord_set(uint32_t track, uint32_t mode)
+{
+    if (track < NPART) {
+        fm1_irq_off();
+        trk[track].p[P_CHORD] = (int16_t)clamp((int32_t)mode, 0, 9);
+        fm1_irq_on();
+    }
+}
+WASM_EXPORT("emu_chord_get") uint32_t emu_chord_get(uint32_t track)
+{
+    return track < NPART ? (uint32_t)clamp(trk[track].p[P_CHORD], 0, 9) : 0u;
+}
 '''
 if needle not in s:
     raise SystemExit("could not locate project.c insertion point")
