@@ -224,6 +224,42 @@ static void test_fun6_migration(void)
             fail("FUN6 migration must initialize neutral Roots Dub gains");
 }
 
+static void test_section_fun7_roundtrip(void)
+{
+    project_t original, replacement, persisted;
+    uint8_t raw[sizeof(project_t)];
+    stop_all();
+    project_save(0);
+    if (!flash_ok || !proj_ok(&proj_slot[0]))
+        fail("section FUN7 setup save failed");
+    memcpy(&original, &proj_slot[0], sizeof original);
+
+    replacement = original;
+    replacement.roots_enabled = 1u;
+    replacement.roots_gain[0] = 0u;
+    replacement.roots_gain[1] = 8192u;
+    replacement.roots_gain[2] = 24576u;
+    replacement.roots_gain[3] = 32768u;
+    replacement.sum = proj_sum(&replacement);
+    memcpy(raw, &replacement, sizeof raw);
+    bk_send_exact(2, raw, sizeof raw, st_crc32(raw, sizeof raw), sizeof raw);
+    expect_commit_rc(0, "valid FUN7 section BK_PUT restore");
+    if (memcmp(&replacement, &proj_slot[0], sizeof replacement))
+        fail("valid FUN7 section BK_PUT did not update the RAM section");
+    if (st_load(OBJ_PROJECT0, &persisted, sizeof persisted) != (int)sizeof persisted ||
+        memcmp(&replacement, &persisted, sizeof replacement))
+        fail("valid FUN7 section BK_PUT did not persist ROOTS settings to flash");
+
+    /* Put the original section back so later tests start from the same committed state. */
+    memcpy(raw, &original, sizeof raw);
+    bk_send_exact(2, raw, sizeof raw, st_crc32(raw, sizeof raw), sizeof raw);
+    expect_commit_rc(0, "restore original section after FUN7 roundtrip");
+    if (memcmp(&original, &proj_slot[0], sizeof original) ||
+        st_load(OBJ_PROJECT0, &persisted, sizeof persisted) != (int)sizeof persisted ||
+        memcmp(&original, &persisted, sizeof original))
+        fail("FUN7 section roundtrip cleanup did not restore RAM and flash");
+}
+
 static void test_section_flash_failure(void)
 {
     project_t original, replacement, persisted;
