@@ -38,9 +38,9 @@ UI_SMALL static int mi_cpu1_have(void)                      /* the second core i
 }
 static const char *const LIGHTS_NAME[LIGHTS_N] = {"OFF", "LOW", "MID", "HIGH"};   /* every button lit, the labels readable */
 static uint8_t dub_pattern_style, dub_bass_style, dub_skank_style;
-static const char *const DUB_PATTERN_NAME[6] = {"ONE DROP", "STEPPERS", "ROCKERS", "ROCKSTEADY", "RUB A DUB", "DUB BREAK"};
-static const char *const DUB_BASS_NAME[4] = {"ROOTS", "WALKING", "STEPPERS", "ROCKERS"};
-static const char *const DUB_SKANK_NAME[3] = {"OFFBEAT", "DOUBLE", "ROCKERS"};
+static const char *const DUB_PATTERN_NAME[10] = {"ONE DROP", "STEPPERS", "ROCKERS", "ROCKSTEADY", "RUB A DUB", "DUB BREAK", "NYABINGHI", "SKA", "EARLY REGGAE", "HALF TIME"};
+static const char *const DUB_BASS_NAME[8] = {"ROOTS", "WALKING", "STEPPERS", "ROCKERS", "ONE DROP", "DUB WALK", "ROCKERS 2", "SKA BASS"};
+static const char *const DUB_SKANK_NAME[6] = {"OFFBEAT", "DOUBLE", "ROCKERS", "HALF STEP", "UPSTROKE", "SKA CHOP"};
 static const char *const DUB_CHORD_NAME[10] = {"OFF", "TRIAD", "7TH", "9TH", "SUS4", "POWER", "SKANK", "SK7", "SK9", "SKSUS"};
 static const char *const KEYS_NAME[KEYS_N] = {"OFF", "C KEYS", "WHITE KEYS", "ALL KEYS"};      /* keys lit too, at the LIGHTS level */
 #define MI_Y0 26                                   /* the first row, under the section tabs */
@@ -60,13 +60,13 @@ UI_SMALL static const char *mi_value(uint32_t i, uint16_t *c)
 {
     *c = C_HI;
     switch (i) {
-    case MI_DUB_STYLE: return DUB_PATTERN_NAME[dub_pattern_style % 6u];
+    case MI_DUB_STYLE: return DUB_PATTERN_NAME[dub_pattern_style % 10u];
     case MI_DUB_APPLY: return "OCT+ TO LOAD";
     case MI_DUB_CHORD: return DUB_CHORD_NAME[(uint32_t)clamp(TSEL->p[P_CHORD], 0, 9)];
     case MI_DUB_SIREN: return "OCT+ TO SELECT";
-    case MI_BASS_STYLE: return DUB_BASS_NAME[dub_bass_style % 4u];
+    case MI_BASS_STYLE: return DUB_BASS_NAME[dub_bass_style % 8u];
     case MI_BASS_APPLY: return "OCT+ TO LOAD";
-    case MI_SKANK_STYLE: return DUB_SKANK_NAME[dub_skank_style % 3u];
+    case MI_SKANK_STYLE: return DUB_SKANK_NAME[dub_skank_style % 6u];
     case MI_SKANK_APPLY: return "OCT+ TO LOAD";
     case MI_ROOTS_SUB: case MI_ROOTS_BASS: case MI_ROOTS_MID: case MI_ROOTS_HIGH: {
         static char b[5]; uint8_t enabled, gain[4];
@@ -260,7 +260,7 @@ UI_SMALL static void mi_set(uint32_t i, int32_t s)
 {
     switch (i) {
     case MI_DUB_STYLE:
-        dub_pattern_style = (uint8_t)((dub_pattern_style + (s < 0 ? 5u : 1u)) % 6u);
+        dub_pattern_style = (uint8_t)((dub_pattern_style + (s < 0 ? 9u : 1u)) % 10u);
         ui.force = 1;
         break;
     case MI_DUB_APPLY:
@@ -271,12 +271,12 @@ UI_SMALL static void mi_set(uint32_t i, int32_t s)
         }
         break;
     case MI_BASS_STYLE:
-        dub_bass_style = (uint8_t)((dub_bass_style + (s < 0 ? 3u : 1u)) % 4u); ui.force = 1; break;
+        dub_bass_style = (uint8_t)((dub_bass_style + (s < 0 ? 7u : 1u)) % 8u); ui.force = 1; break;
     case MI_BASS_APPLY:
         if (!s) { if (is_drum(TSEL)) ui_message("SELECT A SYNTH TRACK"); else { roots_dub_bass_apply(dub_bass_style); ui_message("DUB BASS LOADED"); } ui.force = 1; }
         break;
     case MI_SKANK_STYLE:
-        dub_skank_style = (uint8_t)((dub_skank_style + (s < 0 ? 2u : 1u)) % 3u); ui.force = 1; break;
+        dub_skank_style = (uint8_t)((dub_skank_style + (s < 0 ? 5u : 1u)) % 6u); ui.force = 1; break;
     case MI_SKANK_APPLY:
         if (!s) { if (is_drum(TSEL)) ui_message("SELECT A SYNTH TRACK"); else { roots_dub_skank_apply(dub_skank_style); ui_message("DUB SKANK LOADED"); } ui.force = 1; }
         break;
