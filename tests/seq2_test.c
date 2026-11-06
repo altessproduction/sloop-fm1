@@ -417,6 +417,15 @@ static void t_chordplus(void)
     check(notes_are(c, n, 64, 67, 72, 74), "ROOTS DUB SKANK: one C4 key voices E G C5 D5");
     n = chord_play_notes(&trk[0], 60, CM_MINOR, c);
     check(notes_are(c, n, 63, 67, 72, 74), "ROOTS DUB SKANK + minor modifier: Eb G C5 D5");
+    trk[0].p[P_CHORD] = 7;
+    n = chord_play_notes(&trk[0], 60, 0, c);
+    check(notes_are(c, n, 64, 67, 71, 74), "ROOTS DUB SK7: one C4 key voices E G B D");
+    trk[0].p[P_CHORD] = 8;
+    n = chord_play_notes(&trk[0], 60, 0, c);
+    check(notes_are(c, n, 64, 71, 74, 81), "ROOTS DUB SK9: one C4 key voices E B D A");
+    trk[0].p[P_CHORD] = 9;
+    n = chord_play_notes(&trk[0], 60, 0, c);
+    check(notes_are(c, n, 65, 67, 72, 74), "ROOTS DUB SKSUS: one C4 key voices F G C D");
     trk[0].p[P_CHORD] = 1;
     n = chord_play_notes(&trk[0], 60, CM_MINOR, c);
     check(notes_are(c, n, 60, 63, 67, -1), "CHORD+: F# held: the third flips, C Eb G");
