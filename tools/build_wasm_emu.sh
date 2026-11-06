@@ -3,7 +3,7 @@
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 EMU="$ROOT/build/sloop-web-emu"
-PIN="1c6e80a816f07f350aa8abbbce5f040992b219f3"
+PIN="bbfd8e5b3bfc452520f61afb0d94e2fdfe93fd9d"
 
 rm -rf "$EMU"
 git clone --quiet https://github.com/sabliran/sloop-web-emu.git "$EMU"
