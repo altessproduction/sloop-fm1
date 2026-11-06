@@ -18,9 +18,10 @@ typedef struct {
 typedef struct {
     roots_lr4_biquad_state_t lp[3][2], hp[3][2];
     roots_lr4_biquad_state_t allpass[3]; /* SUB@350, SUB@2500, BASS@2500 */
-    int32_t gain[4]; /* Q15, unity = 32768 */
+    uint16_t gain[4]; /* target Q15 gains, unity = 32768 */
+    uint16_t gain_cur[4]; /* smoothed Q15 gains consumed by the audio path */
     uint16_t wet; /* Q15 dry/wet transition, 64-sample ramp */
-    uint8_t enabled, running;
+    uint8_t enabled, running, gain_ramp; /* remaining samples in the per-band gain ramp */
 } roots_lr4_t;
 
 /* Normalized bilinear Butterworth biquad coefficients, Q30, 44.1 kHz.
@@ -73,6 +74,30 @@ static inline void roots_lr4_init(roots_lr4_t *s)
 {
     memset(s,0,sizeof(*s));
     s->gain[0]=s->gain[1]=s->gain[2]=s->gain[3]=32768;
+    s->gain_cur[0]=s->gain_cur[1]=s->gain_cur[2]=s->gain_cur[3]=32768;
+}
+
+/* Slew all four band gains to their targets over 64 samples. The division
+ * uses the remaining sample count, so the final step lands exactly on target. */
+static inline void roots_lr4_gain_step(roots_lr4_t *s)
+{
+    unsigned i;
+    if (!s->gain_ramp) {
+        for (i=0;i<4;i++) {
+            uint16_t target=s->gain[i] > 32768u ? 32768u : s->gain[i];
+            if (s->gain_cur[i] != target) { s->gain_ramp=64u; break; }
+        }
+    }
+    if (s->gain_ramp) {
+        int32_t left=s->gain_ramp;
+        for (i=0;i<4;i++) {
+            int32_t target=s->gain[i] > 32768u ? 32768 : s->gain[i];
+            int32_t d=target-s->gain_cur[i];
+            if (d > 0) s->gain_cur[i] = (uint16_t)(s->gain_cur[i] + (d + left - 1) / left);
+            else if (d < 0) s->gain_cur[i] = (uint16_t)(s->gain_cur[i] - (-d + left - 1) / left);
+        }
+        s->gain_ramp--;
+    }
 }
 
 /* One instance per channel. Bypass is bit-identical at rest. Enable/disable
@@ -84,6 +109,7 @@ static inline int32_t roots_lr4_process(roots_lr4_t *s, int32_t input)
     int64_t mix=0;
     unsigned i,j;
     if (!s->enabled && s->wet == 0u) { s->running=0u; return input; }
+    roots_lr4_gain_step(s);
     if (!s->running) {
         memset(s->lp,0,sizeof(s->lp));
         memset(s->hp,0,sizeof(s->hp));
@@ -104,7 +130,7 @@ static inline int32_t roots_lr4_process(roots_lr4_t *s, int32_t input)
     bands[0]=roots_lr4_allpass(bands[0],&s->allpass[0],&roots_lr4_ap_coeff[1]);
     bands[0]=roots_lr4_allpass(bands[0],&s->allpass[1],&roots_lr4_ap_coeff[2]);
     bands[1]=roots_lr4_allpass(bands[1],&s->allpass[2],&roots_lr4_ap_coeff[2]);
-    for (i=0;i<4;i++) mix+=(int64_t)bands[i]*s->gain[i];
+    for (i=0;i<4;i++) mix+=(int64_t)bands[i]*s->gain_cur[i];
     filtered=roots_lr4_sat(mix >> 15);
     if (s->enabled) s->wet = s->wet > 32255u ? 32768u : (uint16_t)(s->wet + 512u);
     else s->wet = s->wet < 512u ? 0u : (uint16_t)(s->wet - 512u);
