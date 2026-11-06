@@ -156,6 +156,11 @@ static const preset_t ANALOG_PRESETS[] = {
      XP(P_LD_PIT + 1, 1, P_LRATE + 1, 80, P_LFADE + 1, 60, P_GLIDE + 1, 30)},
     {"SAW BASS", {0, 6, 64, 0, 52, 30, 40, 64}, {0, 60, 60, 20}, 30, 1, FX(8, 0, 0, 4), XP(P_TRANS + 1, -24)},
     {"SINE PAD", {3, 10, 64, 4, 90, 0, 0, 32}, {80, 90, 118, 90}, 0, 0, FX(0, 60, 20, 65)},
+    /* ROOTS DUB factory additions: rounded mono foundations and short offbeat stabs. */
+    {"DUB SUB", {3, 0, 0, 0, 127, 0, 0, 0}, {0, 75, 100, 35}, 0, 1, FX(0, 0, 12, 12), XP(P_GLIDE + 1, 28, P_TRANS + 1, -24)},
+    {"ROOTS BASS", {2, 0, 12, 0, 88, 12, 12, 0}, {0, 70, 100, 28}, 0, 1, FX(0, 0, 18, 8), XP(P_GLIDE + 1, 24, P_TRANS + 1, -12)},
+    {"SKANK STAB", {1, 0, 64, 0, 104, 18, 6, 64}, {0, 42, 0, 18}, 12, 0, FX(0, 18, 32, 12)},
+    {"DUB LEAD", {2, 8, 50, 0, 92, 42, 8, 64}, {3, 65, 96, 32}, 20, 1, FX(0, 12, 48, 24), XP(P_GLIDE + 1, 22)},
 };
 
 /* (after Clipper 1.2) UNISON (voice.c unison_spread): both oscillators moved by r (Q32) of a turn of the note,
