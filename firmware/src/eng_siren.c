@@ -12,7 +12,7 @@ static void siren_note_on(track_t *t, voice_t *v)
     (void)t;
     v->ph[0] = 0;
     v->ph[1] = 0;
-    v->s[0] = 32767;             /* sweep envelope, Q15 */
+    v->s[0] = 1 << 24;           /* sweep envelope, Q24 */
     v->s[1] = v->s[2] = 0;      /* resonant SVF history */
 }
 
@@ -23,7 +23,7 @@ static void siren_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     uint32_t lfo_inc = 10000u + (uint32_t)p[P_E3] * 7000u;
     uint32_t sweep_samples = FS / 10u + ((uint32_t)p[P_E2] * FS * 4u) / 127u;
     int32_t sweep = v->s[0], ic1 = v->s[1], ic2 = v->s[2];
-    int32_t sweep_step = (int32_t)(32767u / sweep_samples);
+    int32_t sweep_step = (int32_t)((1u << 24) / sweep_samples);
     int32_t sweep_semi = p[P_E1] * 16;
     int32_t tune = p[P_E0] * 16;
     int32_t lfo_depth = (p[P_E4] * 192) / 127; /* up to +/- 12 semitones */
@@ -33,7 +33,8 @@ static void siren_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
     tsvf_coef(&filter, p[P_E5] << 8, p[P_E6]);
     for (i = 0; i < n; i++) {
         int32_t lfo_pitch = (osc_sine(lfo) * lfo_depth) >> 15;
-        int32_t pitch = clamp(m->pitch16 + tune + ((sweep_semi * sweep) >> 15) + lfo_pitch, 0, 2047);
+        int32_t sweep_q15 = sweep >> 9;
+        int32_t pitch = clamp(m->pitch16 + tune + ((sweep_semi * sweep_q15) >> 15) + lfo_pitch, 0, 2047);
         uint32_t inc = pitch_inc((uint32_t)pitch);
         int32_t x, y;
         switch ((uint32_t)p[P_E7]) {
