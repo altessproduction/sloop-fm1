@@ -768,6 +768,9 @@ static const struct { uint8_t kind, e; const char *name; } BANK[] = {
     {BK_FX, ENGI_SLICE, "BREAK 16"}, {BK_FX, ENGI_SLICE, "CHOP 8"}, {BK_FX, ENGI_SLICE, "REVERSE"},
     {BK_FX, ENGI_SLICE, "USR SLICE"},
 #endif
+    {BK_FX, ENGI_SIREN, "DUB SIREN"}, {BK_FX, ENGI_SIREN, "AIR HORN"},
+    {BK_FX, ENGI_SIREN, "FALLING DUB"}, {BK_FX, ENGI_SIREN, "RISING TONE"},
+    {BK_FX, ENGI_SIREN, "WOBBLE SIREN"},
 };
 #define NBANK (sizeof BANK / sizeof BANK[0])
 static uint8_t bank_pi[NBANK];                       /* the preset index of each entry in its engine */
