@@ -60,20 +60,24 @@ try {
   await key.dispatchEvent('pointerup', { pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
   if (!(rms > 0.00001)) throw new Error(`AudioWorklet output is silent (RMS ${rms})`);
 
-  await page.keyboard.down('6');                 // GLO: open its page family
-  await page.waitForTimeout(160);
+  await page.keyboard.down('6');                 // Hold GLO, then HOME locks the layer open.
+  await page.waitForTimeout(80);
+  await page.keyboard.down('7');
+  await page.waitForTimeout(80);
+  await page.keyboard.up('7');
+  await page.waitForTimeout(80);
   await page.keyboard.up('6');
   await page.waitForTimeout(500);
   const mixer = await screenState();
-  if (mixer.hash === home.hash) throw new Error('GLO did not open its page family');
-  await page.keyboard.down('7');                 // HOME: leave GLO
-  await page.waitForTimeout(160);
+  if (mixer.hash === home.hash) throw new Error('GLO + HOME did not lock the GLO layer open');
+  await page.keyboard.down('7');                 // HOME unlocks the GLO layer.
+  await page.waitForTimeout(80);
   await page.keyboard.up('7');
   await page.waitForTimeout(500);
   const returned = await screenState();
-  if (returned.hash !== home.hash) throw new Error('HOME did not leave the GLO page family');
+  if (returned.hash !== home.hash) throw new Error('HOME did not unlock and leave the GLO layer');
   if (errors.length) throw new Error('Browser errors: ' + errors.join(' | '));
-  console.log(JSON.stringify({ ok: true, litPixels: home.lit, audioRms: rms, gloPage: true, homeExit: true }));
+  console.log(JSON.stringify({ ok: true, litPixels: home.lit, audioRms: rms, gloLayerLocked: true, homeUnlock: true }));
 } finally {
   await browser.close();
 }
