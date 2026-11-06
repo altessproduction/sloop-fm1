@@ -34,7 +34,7 @@ int main(void)
     for(i=0;i<4;i++) s.target[i]=127;
     for(i=0;i<64;i++) (void)roots_lr4_process(&s,10000);
     for(i=0;i<4;i++) CHECK(s.gain[i]==32768,"band gain fades back to unity in 64 samples");
-    roots_lr4_init(&s);
+    roots_lr4_init(&s); s.enabled=1;
     for(i=0;i<4;i++) { s.gain[i]=0; s.target[i]=0; }
     for(i=0;i<64;i++) (void)roots_lr4_process(&s,(i&1)?50000:-50000);
     CHECK(s.wet==32768u,"enable ramp reaches fully wet in 64 samples");
