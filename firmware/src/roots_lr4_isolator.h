@@ -18,8 +18,8 @@ typedef struct {
 typedef struct {
     roots_lr4_biquad_state_t lp[3][2], hp[3][2];
     roots_lr4_biquad_state_t allpass[3]; /* SUB@350, SUB@2500, BASS@2500 */
-    int32_t gain[4]; /* target Q15 gains, unity = 32768 */
-    int32_t gain_cur[4]; /* smoothed Q15 gains consumed by the audio path */
+    uint16_t gain[4]; /* target Q15 gains, unity = 32768 */
+    uint16_t gain_cur[4]; /* smoothed Q15 gains consumed by the audio path */
     uint16_t wet; /* Q15 dry/wet transition, 64-sample ramp */
     uint8_t enabled, running, gain_ramp; /* remaining samples in the per-band gain ramp */
 } roots_lr4_t;
@@ -90,8 +90,8 @@ static inline void roots_lr4_gain_step(roots_lr4_t *s)
         int32_t left=s->gain_ramp;
         for (i=0;i<4;i++) {
             int32_t d=s->gain[i]-s->gain_cur[i];
-            if (d > 0) s->gain_cur[i] += (d + left - 1) / left;
-            else if (d < 0) s->gain_cur[i] -= (-d + left - 1) / left;
+            if (d > 0) s->gain_cur[i] = (uint16_t)(s->gain_cur[i] + (d + left - 1) / left);
+            else if (d < 0) s->gain_cur[i] = (uint16_t)(s->gain_cur[i] - (-d + left - 1) / left);
         }
         s->gain_ramp--;
     }
