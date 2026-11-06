@@ -60,6 +60,9 @@ int main(void)
     }
     for(i=0;i<4;i++) CHECK(s.gain_cur[i]==32768,"band gain fade reaches unity in 64 samples");
     CHECK(s.gain_ramp==0u,"band gain fade completes without a residual ramp");
+    s.gain[0]=65535u;
+    for(i=0;i<64;i++) (void)roots_lr4_process(&s,10000);
+    CHECK(s.gain_cur[0]==32768u,"out-of-range band target is clamped to Q15 unity");
     roots_lr4_init(&s); s.enabled=1;
     for(i=0;i<4;i++) s.gain[i]=32768;
     for(i=0;i<100000;i++) y=roots_lr4_process(&s,10000);
