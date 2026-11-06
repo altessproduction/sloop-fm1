@@ -184,14 +184,14 @@ static volatile uint8_t proj_roots_enabled;
 /* Narrow editor-facing API: gains are 7-bit on SysEx, Q15 in FUN7.
  * Caller masks IRQs around writes because the audio path may consume them.
  */
-UI_SMALL static void proj_roots_get(uint8_t *enabled, uint8_t gain[4])
+UI_SMALL void proj_roots_get(uint8_t *enabled, uint8_t gain[4])
 {
     uint32_t i;
     *enabled = (uint8_t)(proj_roots_enabled != 0u);
     for (i = 0; i < 4u; i++)
         gain[i] = (uint8_t)(((uint32_t)proj_roots_gain[i] * 127u + 16384u) / 32768u);
 }
-UI_SMALL static void proj_roots_set(uint8_t enabled, const uint8_t gain[4])
+UI_SMALL void proj_roots_set(uint8_t enabled, const uint8_t gain[4])
 {
     uint32_t i;
     proj_roots_enabled = (uint8_t)(enabled != 0u);
