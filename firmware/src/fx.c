@@ -2,6 +2,8 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* Effects: per-track DIST insert, then sends into three shared buses (chorus, tempo delay, reverb).
  * Stereo dry mix; the chorus and the reverb come back in stereo, the delay in the middle. */
+#include "roots_lr4_isolator.h"
+extern void proj_roots_audio_state(uint8_t *enabled, uint16_t gain[4]);
 #define DLY_LEN 65536u           /* 1.49 s: 1/4 down to 41 BPM, 1/8 dotted down to 31, 1/4 dotted down to 61 (clamped below) */
 #define CHO_LEN 2048u
 static int16_t dly_buf[DLY_LEN] __attribute__((section(".pool")));
@@ -21,6 +23,10 @@ static struct {
     uint16_t line_i[4], ap_i[2];
     int32_t line_lp[4];
 } fx;
+/* ROOTS DUB master isolator: one LR4 processor per stereo channel, after
+ * all returns and master DJF, before the master gain/limiter. */
+static roots_lr4_t roots_iso_l = {.gain = {32768, 32768, 32768, 32768}};
+static roots_lr4_t roots_iso_r = {.gain = {32768, 32768, 32768, 32768}};
 static volatile uint8_t rev_frz;         /* punch-in FREEZE (punch.c): the reverb holds, no loss, no damping */
 static int32_t rev_l[CTL], rev_r[CTL];   /* the reverb's own return of this block (FREEZE plays it) */
 
@@ -1226,6 +1232,18 @@ static void mix_block(int32_t *out, uint32_t n)
     dust_process(mix_l, mix_r, n);
     punch_process(mix_l, mix_r, n);
     djf_process(mix_l, mix_r, n);
+    {   /* ROOTS DUB: four-band master isolation, with a click-free 64-sample bypass ramp. */
+        uint8_t enabled;
+        uint16_t gain[4];
+        proj_roots_audio_state(&enabled, gain);
+        roots_iso_l.enabled = roots_iso_r.enabled = enabled;
+        for (i = 0; i < 4u; i++)
+            roots_iso_l.gain[i] = roots_iso_r.gain[i] = gain[i];
+        for (i = 0; i < n; i++) {
+            mix_l[i] = roots_lr4_process(&roots_iso_l, mix_l[i]);
+            mix_r[i] = roots_lr4_process(&roots_iso_r, mix_r[i]);
+        }
+    }
     m1 = (int32_t)song.master_q12;
     m0 = master_cur < 0 ? m1 : master_cur;
     master_cur = m1;
