@@ -9,20 +9,21 @@
 /* ROOTS DUB project controls: native FM-1 menu, no external editor. */
 extern void proj_roots_get(uint8_t *enabled, uint8_t gain[4]);
 extern void proj_roots_set(uint8_t enabled, const uint8_t gain[4]);
+extern void roots_dub_pattern_apply(uint8_t style);
 /* (2.7: USB SERIAL only in a build with the serial console, FELUCCA_CDC=1: the FM-1's build has none) */
 enum { MI_COLOR, MI_ZOOM, MI_ACCEL, MI_LIGHTS, MI_KEYS, MI_NOTES, MI_LOWCUT, MI_USB,
 #if FELUCCA_CDC
        MI_SERIAL,
 #endif
-       MI_RATE, MI_FRESO, MI_ADV, MI_DPREV, MI_CPU1, MI_PANEL, MI_LCLEAR, MI_ABOUT, MI_ROOTS_SUB, MI_ROOTS_BASS, MI_ROOTS_MID, MI_ROOTS_HIGH, MI_COUNT };
+       MI_RATE, MI_FRESO, MI_ADV, MI_DPREV, MI_CPU1, MI_PANEL, MI_LCLEAR, MI_ABOUT, MI_ROOTS_SUB, MI_ROOTS_BASS, MI_ROOTS_MID, MI_ROOTS_HIGH, MI_DUB_STYLE, MI_DUB_APPLY, MI_COUNT };
 static const char *const MI_NAME[MI_COUNT] = {"COLOR", "ZOOM", "KNOB ACCEL", "LIGHTS", "KEYS", "NOTES", "SPEAKER LOWCUT", "USB AUDIO",
 #if FELUCCA_CDC
                                               "USB SERIAL",
 #endif
-                                              "USB RATE", "FILTER RESO", "STEP ADVANCE", "DRUM PREVIEW", "2ND CORE", "HARDWARE CALIBRATION", "MIDI LEARN CLEAR", "ABOUT", "SUB", "BASS", "MID", "HIGH"};
-enum { MS_SCREEN, MS_LIGHTS, MS_AUDIO, MS_SEQ, MS_SYSTEM, MS_ROOTS, MS_COUNT };   /* (2.7.1: SEQ) */
-static const char *const MS_NAME[MS_COUNT] = {"SCREEN", "LIGHTS", "AUDIO", "SEQ", "SYSTEM", "ROOTS"};   /* (AUDIO: and USB) */
-static const uint8_t MS_FIRST[MS_COUNT + 1] = {MI_COLOR, MI_LIGHTS, MI_LOWCUT, MI_ADV, MI_CPU1, MI_ROOTS_SUB, MI_COUNT};   /* rows of each */
+                                              "USB RATE", "FILTER RESO", "STEP ADVANCE", "DRUM PREVIEW", "2ND CORE", "HARDWARE CALIBRATION", "MIDI LEARN CLEAR", "ABOUT", "SUB", "BASS", "MID", "HIGH", "STYLE", "LOAD PATTERN"};
+enum { MS_SCREEN, MS_LIGHTS, MS_AUDIO, MS_SEQ, MS_SYSTEM, MS_ROOTS, MS_DUBPAT, MS_COUNT };   /* (2.7.1: SEQ) */
+static const char *const MS_NAME[MS_COUNT] = {"SCREEN", "LIGHTS", "AUDIO", "SEQ", "SYSTEM", "ROOTS", "DUB PAT"};   /* (AUDIO: and USB) */
+static const uint8_t MS_FIRST[MS_COUNT + 1] = {MI_COLOR, MI_LIGHTS, MI_LOWCUT, MI_ADV, MI_CPU1, MI_ROOTS_SUB, MI_DUB_STYLE, MI_COUNT};   /* rows of each */
 
 UI_SMALL static int mi_cpu1_have(void)                      /* the second core is running (cpu1.c; the host tests have no cpu1.c) */
 {
@@ -33,6 +34,8 @@ UI_SMALL static int mi_cpu1_have(void)                      /* the second core i
 #endif
 }
 static const char *const LIGHTS_NAME[LIGHTS_N] = {"OFF", "LOW", "MID", "HIGH"};   /* every button lit, the labels readable */
+static uint8_t dub_pattern_style;
+static const char *const DUB_PATTERN_NAME[6] = {"ONE DROP", "STEPPERS", "ROCKERS", "ROCKSTEADY", "RUB A DUB", "DUB BREAK"};
 static const char *const KEYS_NAME[KEYS_N] = {"OFF", "C KEYS", "WHITE KEYS", "ALL KEYS"};      /* keys lit too, at the LIGHTS level */
 #define MI_Y0 26                                   /* the first row, under the section tabs */
 #define MI_DY 50                                   /* a row: the label, the value in large type */
@@ -51,6 +54,8 @@ UI_SMALL static const char *mi_value(uint32_t i, uint16_t *c)
 {
     *c = C_HI;
     switch (i) {
+    case MI_DUB_STYLE: return DUB_PATTERN_NAME[dub_pattern_style % 6u];
+    case MI_DUB_APPLY: return "OCT+ TO LOAD";
     case MI_ROOTS_SUB: case MI_ROOTS_BASS: case MI_ROOTS_MID: case MI_ROOTS_HIGH: {
         static char b[5]; uint8_t enabled, gain[4];
         proj_roots_get(&enabled, gain); *c = enabled ? C_HI : C_DIM;
@@ -242,6 +247,17 @@ UI_SMALL static void menu_close(void)
 UI_SMALL static void mi_set(uint32_t i, int32_t s)
 {
     switch (i) {
+    case MI_DUB_STYLE:
+        dub_pattern_style = (uint8_t)((dub_pattern_style + (s < 0 ? 5u : 1u)) % 6u);
+        ui.force = 1;
+        break;
+    case MI_DUB_APPLY:
+        if (!s) {
+            roots_dub_pattern_apply(dub_pattern_style);
+            ui_message("DUB PATTERN LOADED");
+            ui.force = 1;
+        }
+        break;
     case MI_ROOTS_SUB: case MI_ROOTS_BASS: case MI_ROOTS_MID: case MI_ROOTS_HIGH: {
         uint8_t enabled, gain[4]; uint32_t band = i - MI_ROOTS_SUB;
         proj_roots_get(&enabled, gain);
