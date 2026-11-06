@@ -1,0 +1,42 @@
+name: ROOTS DUB WebAssembly emulator
+on:
+  pull_request:
+    paths:
+      - "firmware/**"
+      - "tools/**"
+      - "web/**"
+      - ".github/workflows/roots-dub-wasm.yml"
+  push:
+    branches: [main]
+    paths:
+      - "firmware/**"
+      - "tools/**"
+      - "web/**"
+      - ".github/workflows/roots-dub-wasm.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install WebAssembly compiler and generator dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld git python3 python3-pip
+          python3 -m pip install --break-system-packages Pillow
+      - name: Compile ROOTS DUB firmware for the browser
+        run: sh tools/build_wasm_emu.sh
+      - name: Verify the WebAssembly module and shell
+        run: |
+          test -s build/sloop-web-emu/dist/sloop.wasm
+          file build/sloop-web-emu/dist/sloop.wasm
+          ls -lh build/sloop-web-emu/dist/sloop.wasm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: roots-dub-webassembly-emulator
+          path: build/sloop-web-emu/dist/
+          if-no-files-found: error
+          retention-days: 14
