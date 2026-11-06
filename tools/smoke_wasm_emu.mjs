@@ -79,6 +79,21 @@ try {
   const mixer = await screenState();
   const mixerLeds = await ledState();
   if (mixerLeds === homeLeds) throw new Error('GLO + HOME did not change the panel LEDs to the locked GLO layer');
+
+  // In GLO, the first white key toggles MUTE 1. Toggle it twice so the
+  // smoke test verifies the real action without leaving the saved project changed.
+  await key.dispatchEvent('pointerdown', { pointerId: 2, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
+  await page.waitForTimeout(120);
+  await key.dispatchEvent('pointerup', { pointerId: 2, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
+  await page.waitForTimeout(250);
+  const mutedLeds = await ledState();
+  if (mutedLeds === mixerLeds) throw new Error('GLO key 1 did not change MUTE 1 feedback');
+  await key.dispatchEvent('pointerdown', { pointerId: 3, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
+  await page.waitForTimeout(120);
+  await key.dispatchEvent('pointerup', { pointerId: 3, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
+  await page.waitForTimeout(250);
+  if (await ledState() !== mixerLeds) throw new Error('GLO MUTE 1 did not toggle back to its original state');
+
   await page.keyboard.down('7');                 // HOME unlocks the GLO layer.
   await page.waitForTimeout(80);
   await page.keyboard.up('7');
