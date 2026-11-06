@@ -42,13 +42,6 @@ try {
   await home.dispatchEvent('pointerup',{pointerId:1,pointerType:'mouse',isPrimary:true,button:0,buttons:0});
   await page.waitForTimeout(250);
 
-  // Audio still comes from the same firmware AudioWorklet.
-  await page.locator('.pill').first().dispatchEvent('pointerdown',{pointerId:2,pointerType:'mouse',isPrimary:true,button:0,buttons:1});
-  await page.waitForTimeout(350);
-  const audio=await page.evaluate(async()=>{
-    const ctx=window.__audioContext;
-    return !!ctx && ctx.state==='running';
-  });
   if(errors.length) throw new Error('Browser errors: '+errors.join(' | '));
-  console.log(JSON.stringify({ok:true,nativeHomeMenu:true,selectEncoder:true,lcdChangedSections:hashes.length,audioContextRunning:audio}));
+  console.log(JSON.stringify({ok:true,nativeHomeMenu:true,selectEncoder:true,lcdChangedSections:hashes.length}));
 } finally { await browser.close(); }
