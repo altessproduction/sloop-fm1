@@ -10,21 +10,23 @@
 extern void proj_roots_get(uint8_t *enabled, uint8_t gain[4]);
 extern void proj_roots_set(uint8_t enabled, const uint8_t gain[4]);
 extern void roots_dub_pattern_apply(uint8_t style);
+extern void roots_dub_bass_apply(uint8_t style);
+extern void roots_dub_skank_apply(uint8_t style);
 extern void roots_dub_select_siren(void);
 /* (2.7: USB SERIAL only in a build with the serial console, FELUCCA_CDC=1: the FM-1's build has none) */
 enum { MI_COLOR, MI_ZOOM, MI_ACCEL, MI_LIGHTS, MI_KEYS, MI_NOTES, MI_LOWCUT, MI_USB,
 #if FELUCCA_CDC
        MI_SERIAL,
 #endif
-       MI_RATE, MI_FRESO, MI_ADV, MI_DPREV, MI_CPU1, MI_PANEL, MI_LCLEAR, MI_ABOUT, MI_ROOTS_SUB, MI_ROOTS_BASS, MI_ROOTS_MID, MI_ROOTS_HIGH, MI_DUB_STYLE, MI_DUB_APPLY, MI_DUB_CHORD, MI_DUB_SIREN, MI_COUNT };
+       MI_RATE, MI_FRESO, MI_ADV, MI_DPREV, MI_CPU1, MI_PANEL, MI_LCLEAR, MI_ABOUT, MI_ROOTS_SUB, MI_ROOTS_BASS, MI_ROOTS_MID, MI_ROOTS_HIGH, MI_DUB_STYLE, MI_DUB_APPLY, MI_DUB_CHORD, MI_DUB_SIREN, MI_BASS_STYLE, MI_BASS_APPLY, MI_SKANK_STYLE, MI_SKANK_APPLY, MI_COUNT };
 static const char *const MI_NAME[MI_COUNT] = {"COLOR", "ZOOM", "KNOB ACCEL", "LIGHTS", "KEYS", "NOTES", "SPEAKER LOWCUT", "USB AUDIO",
 #if FELUCCA_CDC
                                               "USB SERIAL",
 #endif
-                                              "USB RATE", "FILTER RESO", "STEP ADVANCE", "DRUM PREVIEW", "2ND CORE", "HARDWARE CALIBRATION", "MIDI LEARN CLEAR", "ABOUT", "SUB", "BASS", "MID", "HIGH", "STYLE", "LOAD PATTERN", "SKANK CHORD", "DUB SIREN"};
-enum { MS_SCREEN, MS_LIGHTS, MS_AUDIO, MS_SEQ, MS_SYSTEM, MS_ROOTS, MS_DUBPAT, MS_DUBPLAY, MS_COUNT };   /* (2.7.1: SEQ) */
-static const char *const MS_NAME[MS_COUNT] = {"SCREEN", "LIGHTS", "AUDIO", "SEQ", "SYSTEM", "ROOTS", "DUB PAT", "DUB PLAY"};   /* (AUDIO: and USB) */
-static const uint8_t MS_FIRST[MS_COUNT + 1] = {MI_COLOR, MI_LIGHTS, MI_LOWCUT, MI_ADV, MI_CPU1, MI_ROOTS_SUB, MI_DUB_STYLE, MI_DUB_CHORD, MI_COUNT};   /* rows of each */
+                                              "USB RATE", "FILTER RESO", "STEP ADVANCE", "DRUM PREVIEW", "2ND CORE", "HARDWARE CALIBRATION", "MIDI LEARN CLEAR", "ABOUT", "SUB", "BASS", "MID", "HIGH", "STYLE", "LOAD PATTERN", "SKANK CHORD", "DUB SIREN", "BASS STYLE", "LOAD BASS", "SKANK STYLE", "LOAD SKANK"};
+enum { MS_SCREEN, MS_LIGHTS, MS_AUDIO, MS_SEQ, MS_SYSTEM, MS_ROOTS, MS_DUBPAT, MS_DUBPLAY, MS_DUBBASS, MS_DUBSKANK, MS_COUNT };   /* (2.7.1: SEQ) */
+static const char *const MS_NAME[MS_COUNT] = {"SCREEN", "LIGHTS", "AUDIO", "SEQ", "SYSTEM", "ROOTS", "DUB PAT", "DUB PLAY", "DUB BASS", "DUB SKANK"};   /* (AUDIO: and USB) */
+static const uint8_t MS_FIRST[MS_COUNT + 1] = {MI_COLOR, MI_LIGHTS, MI_LOWCUT, MI_ADV, MI_CPU1, MI_ROOTS_SUB, MI_DUB_STYLE, MI_DUB_CHORD, MI_BASS_STYLE, MI_SKANK_STYLE, MI_COUNT};   /* rows of each */
 
 UI_SMALL static int mi_cpu1_have(void)                      /* the second core is running (cpu1.c; the host tests have no cpu1.c) */
 {
@@ -35,8 +37,10 @@ UI_SMALL static int mi_cpu1_have(void)                      /* the second core i
 #endif
 }
 static const char *const LIGHTS_NAME[LIGHTS_N] = {"OFF", "LOW", "MID", "HIGH"};   /* every button lit, the labels readable */
-static uint8_t dub_pattern_style;
+static uint8_t dub_pattern_style, dub_bass_style, dub_skank_style;
 static const char *const DUB_PATTERN_NAME[6] = {"ONE DROP", "STEPPERS", "ROCKERS", "ROCKSTEADY", "RUB A DUB", "DUB BREAK"};
+static const char *const DUB_BASS_NAME[4] = {"ROOTS", "WALKING", "STEPPERS", "ROCKERS"};
+static const char *const DUB_SKANK_NAME[3] = {"OFFBEAT", "DOUBLE", "ROCKERS"};
 static const char *const DUB_CHORD_NAME[10] = {"OFF", "TRIAD", "7TH", "9TH", "SUS4", "POWER", "SKANK", "SK7", "SK9", "SKSUS"};
 static const char *const KEYS_NAME[KEYS_N] = {"OFF", "C KEYS", "WHITE KEYS", "ALL KEYS"};      /* keys lit too, at the LIGHTS level */
 #define MI_Y0 26                                   /* the first row, under the section tabs */
@@ -60,6 +64,10 @@ UI_SMALL static const char *mi_value(uint32_t i, uint16_t *c)
     case MI_DUB_APPLY: return "OCT+ TO LOAD";
     case MI_DUB_CHORD: return DUB_CHORD_NAME[(uint32_t)clamp(TSEL->p[P_CHORD], 0, 9)];
     case MI_DUB_SIREN: return "OCT+ TO SELECT";
+    case MI_BASS_STYLE: return DUB_BASS_NAME[dub_bass_style % 4u];
+    case MI_BASS_APPLY: return "OCT+ TO LOAD";
+    case MI_SKANK_STYLE: return DUB_SKANK_NAME[dub_skank_style % 3u];
+    case MI_SKANK_APPLY: return "OCT+ TO LOAD";
     case MI_ROOTS_SUB: case MI_ROOTS_BASS: case MI_ROOTS_MID: case MI_ROOTS_HIGH: {
         static char b[5]; uint8_t enabled, gain[4];
         proj_roots_get(&enabled, gain); *c = enabled ? C_HI : C_DIM;
@@ -261,6 +269,16 @@ UI_SMALL static void mi_set(uint32_t i, int32_t s)
             ui_message("DUB PATTERN LOADED");
             ui.force = 1;
         }
+        break;
+    case MI_BASS_STYLE:
+        dub_bass_style = (uint8_t)((dub_bass_style + (s < 0 ? 3u : 1u)) % 4u); ui.force = 1; break;
+    case MI_BASS_APPLY:
+        if (!s) { if (is_drum(TSEL)) ui_message("SELECT A SYNTH TRACK"); else { roots_dub_bass_apply(dub_bass_style); ui_message("DUB BASS LOADED"); } ui.force = 1; }
+        break;
+    case MI_SKANK_STYLE:
+        dub_skank_style = (uint8_t)((dub_skank_style + (s < 0 ? 2u : 1u)) % 3u); ui.force = 1; break;
+    case MI_SKANK_APPLY:
+        if (!s) { if (is_drum(TSEL)) ui_message("SELECT A SYNTH TRACK"); else { roots_dub_skank_apply(dub_skank_style); ui_message("DUB SKANK LOADED"); } ui.force = 1; }
         break;
     case MI_DUB_CHORD:
         if (is_drum(TSEL)) { ui_message("SELECT A SYNTH TRACK"); break; }
