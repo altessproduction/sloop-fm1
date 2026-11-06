@@ -5,7 +5,6 @@
 #ifndef ROOTS_LR4_ISOLATOR_H
 #define ROOTS_LR4_ISOLATOR_H
 #include <stdint.h>
-#include <string.h>
 
 #define ROOTS_LR4_Q30 INT64_C(1073741824)
 #define ROOTS_LR4_MAX 1048575
@@ -71,8 +70,16 @@ static inline int32_t roots_lr4_allpass(int32_t x,
 
 static inline void roots_lr4_init(roots_lr4_t *s)
 {
-    memset(s,0,sizeof(*s));
+    unsigned i, j;
+    for (i=0;i<3;i++) {
+        for (j=0;j<2;j++) {
+            s->lp[i][j].x1=s->lp[i][j].x2=s->lp[i][j].y1=s->lp[i][j].y2=0;
+            s->hp[i][j].x1=s->hp[i][j].x2=s->hp[i][j].y1=s->hp[i][j].y2=0;
+        }
+        s->allpass[i].x1=s->allpass[i].x2=s->allpass[i].y1=s->allpass[i].y2=0;
+    }
     s->gain[0]=s->gain[1]=s->gain[2]=s->gain[3]=32768;
+    s->wet=0; s->enabled=0; s->running=0;
 }
 
 /* One instance per channel. Bypass is bit-identical at rest. Enable/disable
@@ -85,9 +92,13 @@ static inline int32_t roots_lr4_process(roots_lr4_t *s, int32_t input)
     unsigned i,j;
     if (!s->enabled && s->wet == 0u) { s->running=0u; return input; }
     if (!s->running) {
-        memset(s->lp,0,sizeof(s->lp));
-        memset(s->hp,0,sizeof(s->hp));
-        memset(s->allpass,0,sizeof(s->allpass));
+        for (i=0;i<3;i++) {
+            for (j=0;j<2;j++) {
+                s->lp[i][j].x1=s->lp[i][j].x2=s->lp[i][j].y1=s->lp[i][j].y2=0;
+                s->hp[i][j].x1=s->hp[i][j].x2=s->hp[i][j].y1=s->hp[i][j].y2=0;
+            }
+            s->allpass[i].x1=s->allpass[i].x2=s->allpass[i].y1=s->allpass[i].y2=0;
+        }
         s->running=1u;
     }
     rest=input_q8;
