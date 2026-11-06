@@ -8,7 +8,7 @@ on:
       - "web/**"
       - ".github/workflows/roots-dub-wasm.yml"
   push:
-    branches: [main]
+    branches: ["**"]
     paths:
       - "firmware/**"
       - "tools/**"
