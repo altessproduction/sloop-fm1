@@ -326,7 +326,7 @@ static void sort_notes(uint8_t *c, uint32_t n)
 /* the chord of white key n with the modifiers held, voiced (VLEAD); its notes (<= 4) into c[] */
 static uint32_t chord_play_notes(track_t *t, uint32_t n, uint32_t mods, uint8_t *c)
 {
-    uint32_t k = chord_notes(t, n, c), j, type = (uint32_t)clamp(t->p[P_CHORD], 0, 6), part = trk_index(t);
+    uint32_t k = chord_notes(t, n, c), j, type = (uint32_t)clamp(t->p[P_CHORD], 0, 9), part = trk_index(t);
     if (type != 5u && k >= 2u && mods) {                /* (POWER: the inversion only) */
         uint32_t third = scale_up(t, n, 2u);
         for (j = 0; j < k; j++) {
@@ -3685,8 +3685,12 @@ void roots_dub_skank_apply(uint8_t style)
     for (i = 0; i < 16u; i++)
         if (masks[style] & (1u << i)) {
             step_t *s = &t->step[i];
-            s->note[0] = (uint8_t)clamp(60 + t->p[P_ROOT], 0, 127);
-            s->n = 1;
+            uint8_t chord[4];
+            uint32_t n = chord_notes(t, (uint32_t)clamp(60 + t->p[P_ROOT], 0, 127), chord);
+            uint32_t j;
+            for (j = 0; j < n && j < 4u; j++)
+                s->note[j] = chord[j];
+            s->n = (uint8_t)n;
             s->time = ST_NOTE;
             s->vel = (i & 4u) ? 92u : 108u;
             s->flags = SF_ACCENT;
