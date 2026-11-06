@@ -117,6 +117,16 @@ try {
   await key.dispatchEvent('pointerup', { pointerId: 21, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
   if (!(isolatorRestoredRms > 0.00001)) throw new Error('ROOTS isolator bypass did not restore master audio');
 
+  const chordMode = rootsPanel.locator('select').nth(1);
+  await chordMode.selectOption('6');          // Native SKANK mode on synth track 1.
+  await page.waitForTimeout(80);
+  await key.dispatchEvent('pointerdown', { pointerId: 22, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
+  await page.waitForTimeout(180);
+  const skankRms = await measureRms();
+  await key.dispatchEvent('pointerup', { pointerId: 22, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
+  if (!(skankRms > 0.00001)) throw new Error('One-key SKANK mode did not produce firmware audio');
+  await chordMode.selectOption('0');
+
   await page.keyboard.down('6');                 // Hold GLO, then HOME locks the layer open.
   await page.waitForTimeout(80);
   await page.keyboard.down('7');
@@ -152,7 +162,7 @@ try {
   const returnedLeds = await ledState();
   if (returnedLeds !== homeLeds) throw new Error('HOME did not restore the normal panel LEDs after GLO');
   if (errors.length) throw new Error('Browser errors: ' + errors.join(' | '));
-  console.log(JSON.stringify({ ok: true, litPixels: home.lit, audioRms: rms, retriggerSeconds: 15, minActivityRms, silentWindows, isolatorZeroRms, isolatorRestoredRms, gloLayerLocked: true, homeUnlock: true }));
+  console.log(JSON.stringify({ ok: true, litPixels: home.lit, audioRms: rms, retriggerSeconds: 15, minActivityRms, silentWindows, isolatorZeroRms, isolatorRestoredRms, skankRms, gloLayerLocked: true, homeUnlock: true }));
 } finally {
   await browser.close();
 }
