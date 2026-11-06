@@ -88,6 +88,31 @@ try {
   const silentWindows = activityRms.filter(v => !(v > 0.00001)).length;
   if (silentWindows) throw new Error(`AudioWorklet had ${silentWindows} silent retrigger measurements (minimum RMS ${minActivityRms})`);
 
+  /* Exercise the browser controls against the actual firmware master bus. */
+  const rootsPanel = page.locator('#roots-controls');
+  await rootsPanel.waitFor();
+  const rootsToggle = rootsPanel.locator('input[type="checkbox"]');
+  const rootsBands = rootsPanel.locator('input[type="range"]');
+  if (await rootsBands.count() !== 4) throw new Error('ROOTS master isolator must expose four band gains');
+  await rootsToggle.check();
+  for (let i = 0; i < 4; i++)
+    await rootsBands.nth(i).evaluate(el => { el.value = '0'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.waitForTimeout(120);
+  await key.dispatchEvent('pointerdown', { pointerId: 20, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
+  await page.waitForTimeout(180);
+  const isolatorZeroRms = await measureRms();
+  await key.dispatchEvent('pointerup', { pointerId: 20, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
+  if (isolatorZeroRms > 0.00001) throw new Error(`ROOTS isolator zero-gain did not mute the master bus (RMS ${isolatorZeroRms})`);
+  for (let i = 0; i < 4; i++)
+    await rootsBands.nth(i).evaluate(el => { el.value = '127'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await rootsToggle.uncheck();
+  await page.waitForTimeout(120);
+  await key.dispatchEvent('pointerdown', { pointerId: 21, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
+  await page.waitForTimeout(180);
+  const isolatorRestoredRms = await measureRms();
+  await key.dispatchEvent('pointerup', { pointerId: 21, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
+  if (!(isolatorRestoredRms > 0.00001)) throw new Error('ROOTS isolator bypass did not restore master audio');
+
   await page.keyboard.down('6');                 // Hold GLO, then HOME locks the layer open.
   await page.waitForTimeout(80);
   await page.keyboard.down('7');
@@ -123,7 +148,7 @@ try {
   const returnedLeds = await ledState();
   if (returnedLeds !== homeLeds) throw new Error('HOME did not restore the normal panel LEDs after GLO');
   if (errors.length) throw new Error('Browser errors: ' + errors.join(' | '));
-  console.log(JSON.stringify({ ok: true, litPixels: home.lit, audioRms: rms, retriggerSeconds: 15, minActivityRms, silentWindows, gloLayerLocked: true, homeUnlock: true }));
+  console.log(JSON.stringify({ ok: true, litPixels: home.lit, audioRms: rms, retriggerSeconds: 15, minActivityRms, silentWindows, isolatorZeroRms, isolatorRestoredRms, gloLayerLocked: true, homeUnlock: true }));
 } finally {
   await browser.close();
 }
