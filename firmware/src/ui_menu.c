@@ -53,7 +53,7 @@ UI_SMALL static const char *mi_value(uint32_t i, uint16_t *c)
     switch (i) {
     case MI_ROOTS_SUB: case MI_ROOTS_BASS: case MI_ROOTS_MID: case MI_ROOTS_HIGH: {
         static char b[5]; uint8_t enabled, gain[4];
-        proj_roots_get(&enabled, gain); (void)enabled;
+        proj_roots_get(&enabled, gain); *c = enabled ? C_HI : C_DIM;
         fmt_int(b, gain[i - MI_ROOTS_SUB]); return b;
     }
     case MI_COLOR:                                    /* (2.7) your theme, by its name */
@@ -382,6 +382,7 @@ UI_SMALL static void menu_input(uint32_t pressed)
         uint8_t enabled, gain[4];
         proj_roots_get(&enabled, gain);
         proj_roots_set((uint8_t)!enabled, gain);
+        ui_message(enabled ? "ISOLATOR BYPASS" : "ISOLATOR ON");
         ui.force = 1;
     } else if (ok)
         mi_set(ui.menu_sel % MI_COUNT, 0);
