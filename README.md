@@ -25,7 +25,7 @@ This branch keeps the original SLOOP engines, tracks, sequencer, projects and MI
 - **One-key SKANK chords:** set a track's CHORD mode to SKANK, SK7, SK9 or SKSUS; one played key voices a scale-based, rootless reggae voicing.
 - **DUB SIREN engine:** a playable monophonic synth engine with tune, pitch sweep and sweep time, LFO rate/depth, resonant filter and the track's normal delay/reverb sends.
 - **ROOTS DUB presets:** DUB SUB, ROOTS BASS, SKANK STAB, DUB LEAD, DUB CHORD, SKANK KEYS, ORGAN BUBBLE, SKANK ORGAN, plus five siren presets.
-- **Four-band master isolator:** SUB, BASS, MID and HIGH gains with a click-free bypass ramp. The web emulator exposes controls connected to the firmware master bus; settings are stored with project saves.
+- **Four-band master isolator:** SUB, BASS, MID and HIGH gains with a click-free bypass ramp. The web emulator exposes four-band master controls and a per-synth SKANK voicing selector connected to the firmware; settings are stored with project saves.
 
 The ROOTS DUB changes are being validated on a separate branch before any merge or release. See the [native regression workflow](https://github.com/altessproduction/sloop-fm1/actions/workflows/roots-dub-host.yml) and [emulator build workflow](https://github.com/altessproduction/sloop-fm1/actions/workflows/roots-dub-wasm.yml).
 
