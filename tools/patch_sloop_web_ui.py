@@ -49,7 +49,7 @@ if anchor not in s:
 if "const rootsState =" not in s:
     s = s.replace(anchor, insert, 1)
 
-panel_anchor = "/* ---------------------------------------------------------- computer keyboard --- */"
+panel_anchor = "/* --------------------------------------------------- computer keyboard --- */"
 panel = r"""
 function buildRootsPanel() {
     const panel = document.createElement('section');
