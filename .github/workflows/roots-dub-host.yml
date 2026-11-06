@@ -31,6 +31,10 @@ jobs:
           build/host/roots_lr4
           cc -O2 -w -Ibuild/gen -Ifirmware/src -o build/host/seq2 tests/seq2_test.c -lm
           build/host/seq2
+          cc -O2 -w -Ibuild/gen -Ifirmware/src -o build/host/project tests/project_test.c -lm
+          build/host/project
+          cc -O2 -w -Ibuild/gen -Ifirmware/src -o build/host/song_audio tests/song_audio_test.c -lm
+          build/host/song_audio
       - name: Verify factory sound golden renders
         run: |
           cc -O2 -w -Ibuild/gen -Ifirmware/src -o build/host/regress tests/regress.c -lm
