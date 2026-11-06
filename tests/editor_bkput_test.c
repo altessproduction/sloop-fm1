@@ -118,11 +118,12 @@ static void test_section_flash_failure(void)
 {
     project_t original, replacement;
     uint8_t raw[sizeof(project_t)];
-    uint32_t erases_before = fl_erases;
+    uint32_t erases_before;
     stop_all();
     project_save(0);
     if (proj_slot[0].magic != PROJ_MAGIC) fail("section setup save failed");
     memcpy(&original, &proj_slot[0], sizeof original);
+    erases_before = fl_erases;
     proj_capture(&replacement);
     replacement.roots_gain[0] = 0u;
     replacement.sum = proj_sum(&replacement);
