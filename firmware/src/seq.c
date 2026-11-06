@@ -323,7 +323,7 @@ static void sort_notes(uint8_t *c, uint32_t n)
 /* the chord of white key n with the modifiers held, voiced (VLEAD); its notes (<= 4) into c[] */
 static uint32_t chord_play_notes(track_t *t, uint32_t n, uint32_t mods, uint8_t *c)
 {
-    uint32_t k = chord_notes(t, n, c), j, type = (uint32_t)clamp(t->p[P_CHORD], 0, 5), part = trk_index(t);
+    uint32_t k = chord_notes(t, n, c), j, type = (uint32_t)clamp(t->p[P_CHORD], 0, 6), part = trk_index(t);
     if (type != 5u && k >= 2u && mods) {                /* (POWER: the inversion only) */
         uint32_t third = scale_up(t, n, 2u);
         for (j = 0; j < k; j++) {
