@@ -60,17 +60,20 @@ try {
   await key.dispatchEvent('pointerup', { pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
   if (!(rms > 0.00001)) throw new Error(`AudioWorklet output is silent (RMS ${rms})`);
 
-  const glo = page.locator('.btn').filter({ hasText: 'GLO' }).first();
-  await glo.dispatchEvent('pointerdown', { pointerId: 2, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 1 });
-  await page.waitForTimeout(350);
+  await page.keyboard.down('6');                 // GLO: open its page family
+  await page.waitForTimeout(160);
+  await page.keyboard.up('6');
+  await page.waitForTimeout(500);
   const mixer = await screenState();
-  await glo.dispatchEvent('pointerup', { pointerId: 2, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 });
-  await page.waitForTimeout(350);
+  if (mixer.hash === home.hash) throw new Error('GLO did not open its page family');
+  await page.keyboard.down('7');                 // HOME: leave GLO
+  await page.waitForTimeout(160);
+  await page.keyboard.up('7');
+  await page.waitForTimeout(500);
   const returned = await screenState();
-  if (mixer.hash === home.hash) throw new Error('GLO did not open a distinct firmware screen');
-  if (returned.hash !== home.hash) throw new Error('Releasing GLO did not return to the previous firmware screen');
+  if (returned.hash !== home.hash) throw new Error('HOME did not leave the GLO page family');
   if (errors.length) throw new Error('Browser errors: ' + errors.join(' | '));
-  console.log(JSON.stringify({ ok: true, litPixels: home.lit, audioRms: rms, gloLayer: true, gloExit: true }));
+  console.log(JSON.stringify({ ok: true, litPixels: home.lit, audioRms: rms, gloPage: true, homeExit: true }));
 } finally {
   await browser.close();
 }
