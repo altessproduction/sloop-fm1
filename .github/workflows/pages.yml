@@ -32,20 +32,41 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-      - name: Install WebAssembly compiler
+      - name: Install firmware and WebAssembly build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang lld
-      - name: Build the actual SLOOP DSP for browser preview
+          sudo apt-get install -y clang lld curl xz-utils git python3-pip
+          python3 -m pip install --break-system-packages Pillow
+      - name: Fetch JieLi AC79 SDK
+        run: |
+          git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git "$HOME/fw-AC79_AIoT_SDK"
+      - name: Install JieLi pi32v2 toolchain
+        run: sh tools/get_toolchain.sh
+      - name: Build the complete SLOOP ROOTS DUB FM-1 package
+        run: sh build.sh
+      - name: Build the SLOOP DSP preview
         run: python3 tools/build_preview.py
+      - name: Install Rust WebAssembly target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Fetch and build the full FM-1 hardware emulator
+        run: |
+          git clone https://github.com/joakimeriksson/fm1-emu.git /tmp/fm1-emu
+          git -C /tmp/fm1-emu checkout 1c6e80a816f07f350aa8abbbce5f040992b219f3
+          python3 tools/patch_fm1_emu.py /tmp/fm1-emu/web/main.js
+          sh /tmp/fm1-emu/web/build.sh public/web/fm1-emu
+          cp /tmp/fm1-emu/LICENSE public/web/fm1-emu/LICENSE-fm1-emu.txt
       - name: Prepare static emulator site
         run: |
-          mkdir -p public/web
+          mkdir -p public/web public/web/firmware
+          cp build/felucca.fwsc public/web/firmware/roots-dub.fwsc
           cp web/editor.html public/web/editor.html
           cp web/fukiai.ttf public/web/fukiai.ttf
           cp web/FUKIAI-LICENSE.txt public/web/FUKIAI-LICENSE.txt
