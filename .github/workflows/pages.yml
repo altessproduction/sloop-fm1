@@ -25,6 +25,10 @@ jobs:
     steps:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
+      - name: Check out the source used by the successful browser build
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - name: Download the tested ROOTS DUB browser emulator
         uses: actions/download-artifact@v4
         with:
@@ -37,10 +41,6 @@ jobs:
           test -s public/roots-dub/index.html
           test -s public/roots-dub/sloop.wasm
           test -s public/roots-dub/worklet.js
-      - name: Keep the existing project landing page and tools
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
       - name: Preserve existing published tools and add ROOTS DUB link
         run: |
           mkdir -p public
