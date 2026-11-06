@@ -52,4 +52,33 @@ if needle not in s:
 if '#include "scratch.h"' not in s:
     s = s.replace(needle, '#include "scratch.h"\n' + needle, 1)
 
+
+# Expose the firmware's persisted ROOTS master-isolator settings to the emulator UI.
+# These call the same project.c state used by the audio mixer and project serializer.
+needle = '#include "project.c"\\n'
+insert = needle + '''
+WASM_EXPORT("emu_roots_set") void emu_roots_set(uint32_t enabled, uint32_t sub, uint32_t bass,
+                                                uint32_t mid, uint32_t high)
+{
+    uint8_t gain[4];
+    gain[0] = (uint8_t)clamp((int32_t)sub, 0, 127);
+    gain[1] = (uint8_t)clamp((int32_t)bass, 0, 127);
+    gain[2] = (uint8_t)clamp((int32_t)mid, 0, 127);
+    gain[3] = (uint8_t)clamp((int32_t)high, 0, 127);
+    fm1_irq_off();
+    proj_roots_set((uint8_t)(enabled != 0u), gain);
+    fm1_irq_on();
+}
+WASM_EXPORT("emu_roots_get") uint32_t emu_roots_get(uint32_t index)
+{
+    uint8_t enabled, gain[4];
+    proj_roots_get(&enabled, gain);
+    return index == 0u ? enabled : (index <= 4u ? gain[index - 1u] : 0u);
+}
+'''
+if needle not in s:
+    raise SystemExit("could not locate project.c insertion point")
+if 'WASM_EXPORT("emu_roots_set")' not in s:
+    s = s.replace(needle, insert, 1)
+
 p.write_text(s)
