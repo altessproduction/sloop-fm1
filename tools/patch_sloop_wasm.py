@@ -24,14 +24,14 @@ if 'ROOTS DUB has the FM-1 second-core scheduler' not in s:
     s = s.replace(needle, insert, 1)
 
 # The browser input HAL has no MIDI-remote button matrix state.
-needle = 'static uint8_t fm1_led[FM1_NCOL];\\n'
+needle = 'static uint8_t fm1_led[FM1_NCOL];\n'
 if needle not in s:
     raise SystemExit("could not locate browser LED state")
 if 'static volatile uint32_t fm1_remote_btn;' not in s:
-    s = s.replace(needle, 'static volatile uint32_t fm1_remote_btn;\\n' + needle, 1)
+    s = s.replace(needle, 'static volatile uint32_t fm1_remote_btn;\n' + needle, 1)
 
 # Map the firmware's XIP and JEDEC checks onto the emulator's RAM flash image.
-needle = 'static int emu_fl_ok(uint32_t off, uint32_t n)\\n'
+needle = 'static int emu_fl_ok(uint32_t off, uint32_t n)\n'
 insert = '''#define ST_XIP_PTR(off) (emu_flash + ((off) - EMU_FLASH_BASE))
 #define FL_JEDEC_OK(id) ((id) == 0x856014u || (id) == 0xB36014u)
 
