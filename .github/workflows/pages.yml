@@ -38,20 +38,23 @@ jobs:
           cat > public/index.html <<'EOF'
           <!doctype html>
           <html lang="fr">
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width,initial-scale=1">
-          <title>FM1 ROOTS DUB — essais web</title>
-          <style>
-            body{font:16px system-ui,sans-serif;max-width:46rem;margin:12vh auto;padding:0 1.25rem;background:#101010;color:#eee}
-            a{color:#e6bd65}li{margin:1rem 0}small{color:#aaa}
-          </style>
-          <h1>FM1 ROOTS DUB</h1>
-          <p>Outils de test dans le navigateur, sans pédale FM-1.</p>
-          <ul>
-            <li><a href="./web/editor.html?mock=1&roots=1">Ouvrir l'éditeur SLOOP simulé — panneau ROOTS DUB</a></li>
-            <li><a href="./web/roots-dub-lab.html">Ouvrir le laboratoire audio ROOTS DUB</a></li>
-          </ul>
-          <p><small>Le périphérique simulé teste l'interface et le protocole, pas le DSP audio du firmware.</small></p>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <meta http-equiv="refresh" content="0;url=./web/editor.html?mock=1&amp;roots=1">
+            <title>FM1 ROOTS DUB — éditeur FM1</title>
+            <style>
+              body{font:16px/1.5 system-ui,sans-serif;max-width:48rem;margin:12vh auto;padding:0 1.25rem;background:#101010;color:#eee}
+              a{color:#e6bd65}p{color:#bbb}
+            </style>
+          </head>
+          <body>
+            <h1>FM1 ROOTS DUB</h1>
+            <p>Ouverture de l’interface FM1 simulée…</p>
+            <p><a href="./web/editor.html?mock=1&amp;roots=1">Ouvrir l’éditeur FM1</a></p>
+            <p><a href="./web/roots-dub-lab.html">Ouvrir séparément le laboratoire audio (sirène et isolateur)</a></p>
+            <p>Dans l’éditeur, appuie sur Connect puis ouvre SOUND pour accéder aux réglages ROOTS DUB. Aucun FM1 physique n’est nécessaire.</p>
+          </body>
           </html>
           EOF
       - name: Upload GitHub Pages artifact
