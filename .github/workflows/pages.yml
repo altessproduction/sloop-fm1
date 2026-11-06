@@ -59,10 +59,12 @@ jobs:
           python3 tools/patch_fm1_emu.py /tmp/fm1-emu/web/main.js
           bash /tmp/fm1-emu/web/build.sh "$GITHUB_WORKSPACE/public/web/fm1-emu"
           cp /tmp/fm1-emu/LICENSE "$GITHUB_WORKSPACE/public/web/fm1-emu/LICENSE-fm1-emu.txt"
-      - name: Boot our compiled package in the native FM-1 emulator
-        run: |
-          cargo run --release --manifest-path /tmp/fm1-emu/Cargo.toml -p fm1-emu -- --fwsc "$GITHUB_WORKSPACE/build/felucca.fwsc" --ms 1000 --wav "$RUNNER_TEMP/roots-dub-smoke.wav" --quiet
-          test -s "$RUNNER_TEMP/roots-dub-smoke.wav"
+      - name: Set up Node.js for the WebAssembly smoke test
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Boot our exact package in the browser's FM-1 WebAssembly emulator
+        run: node /tmp/fm1-emu/web/smoke.mjs "$GITHUB_WORKSPACE/public/web/fm1-emu" "$GITHUB_WORKSPACE/build/felucca.fwsc"
       - name: Prepare static emulator site
         run: |
           mkdir -p public/web public/web/firmware
