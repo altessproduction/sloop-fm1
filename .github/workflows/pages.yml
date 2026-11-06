@@ -1,0 +1,62 @@
+name: Publish ROOTS DUB web emulator
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/editor.html"
+      - "web/roots-dub-lab.html"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Prepare static emulator site
+        run: |
+          mkdir -p public/web
+          cp web/editor.html public/web/editor.html
+          cp web/roots-dub-lab.html public/web/roots-dub-lab.html
+          cat > public/index.html <<'EOF'
+          <!doctype html>
+          <html lang="fr">
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <title>FM1 ROOTS DUB — essais web</title>
+          <style>
+            body{font:16px system-ui,sans-serif;max-width:46rem;margin:12vh auto;padding:0 1.25rem;background:#101010;color:#eee}
+            a{color:#e6bd65}li{margin:1rem 0}small{color:#aaa}
+          </style>
+          <h1>FM1 ROOTS DUB</h1>
+          <p>Outils de test dans le navigateur, sans pédale FM-1.</p>
+          <ul>
+            <li><a href="./web/editor.html?mock=1&roots=1">Ouvrir l'éditeur SLOOP simulé — panneau ROOTS DUB</a></li>
+            <li><a href="./web/roots-dub-lab.html">Ouvrir le laboratoire audio ROOTS DUB</a></li>
+          </ul>
+          <p><small>Le périphérique simulé teste l'interface et le protocole, pas le DSP audio du firmware.</small></p>
+          </html>
+          EOF
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
