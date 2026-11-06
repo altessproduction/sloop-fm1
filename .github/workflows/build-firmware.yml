@@ -1,0 +1,52 @@
+name: Build complete FM-1 firmware
+on:
+  pull_request:
+    paths:
+      - "firmware/**"
+      - "tools/**"
+      - "assets/**"
+      - "build.sh"
+      - "build.py"
+      - ".github/workflows/build-firmware.yml"
+  push:
+    branches: [main]
+    paths:
+      - "firmware/**"
+      - "tools/**"
+      - "assets/**"
+      - "build.sh"
+      - "build.py"
+      - ".github/workflows/build-firmware.yml"
+permissions:
+  contents: read
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out SLOOP ROOTS DUB
+        uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl xz-utils python3 python3-pip git
+          python3 -m pip install --break-system-packages Pillow
+      - name: Fetch JieLi AC79 SDK
+        run: |
+          git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git "$HOME/fw-AC79_AIoT_SDK"
+      - name: Install JieLi pi32v2 toolchain
+        run: tools/get_toolchain.sh
+      - name: Build installable FM-1 firmware package
+        run: ./build.sh
+      - name: Verify generated package
+        run: |
+          test -s build/felucca.fwsc
+          ls -lh build/felucca.fwsc
+          sha256sum build/felucca.fwsc
+      - name: Publish firmware package as CI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sloop-roots-dub-fm1-fwsc
+          path: build/felucca.fwsc
+          if-no-files-found: error
+          retention-days: 30
