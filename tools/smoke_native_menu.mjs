@@ -31,8 +31,8 @@ try {
   const menuHash=await lcdHash();
   if(menuHash===homeHash) throw new Error('Holding HOME for 700 ms did not open the native firmware menu');
 
-  // SELECT is encoder 0. The native menu has SCREEN, LIGHTS, AUDIO, SEQ,
-  // SYSTEM, ROOTS, DUB PAT, DUB PLAY, DUB BASS and DUB SKANK sections.
+  // SELECT is encoder 0. The native menu includes the ROOTS DUB sections:
+  // ROOTS, DUB PAT, SIREN, DUB BASS and SKANK.
   const select=page.locator('.cap').nth(0);
   const hashes=[];
   for(let i=0;i<5;i++){
