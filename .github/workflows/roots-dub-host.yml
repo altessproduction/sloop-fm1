@@ -22,6 +22,11 @@ jobs:
           sudo apt-get install -y clang lld
       - name: Generate firmware tables and build browser preview
         run: python3 tools/build_preview.py
+      - name: Generate the UI font and icon headers for native framebuffer tests
+        run: |
+          sudo apt-get install -y python3-pil
+          python3 tools/gen_font.py build/gen/felucca_font.h
+          python3 tools/gen_icons.py build/gen/felucca_icons.h
       - name: Compare native and WebAssembly output for every engine
         run: tests/run_preview_tests.sh
       - name: Exercise the actual native FM-1 UI, including ROOTS DUB menu actions
