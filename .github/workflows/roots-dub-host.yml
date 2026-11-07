@@ -1,4 +1,4 @@
-# Re-trigger validation after GitHub Actions was re-enabled.
+# Trigger native regression after repository workflow activation.
 name: ROOTS DUB native regression (SIREN and SKANK)
 on:
   push:
