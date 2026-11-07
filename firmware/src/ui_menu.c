@@ -18,15 +18,15 @@ enum { MI_COLOR, MI_ZOOM, MI_ACCEL, MI_LIGHTS, MI_KEYS, MI_NOTES, MI_LOWCUT, MI_
 #if FELUCCA_CDC
        MI_SERIAL,
 #endif
-       MI_RATE, MI_FRESO, MI_ADV, MI_DPREV, MI_CPU1, MI_PANEL, MI_LCLEAR, MI_ABOUT, MI_ROOTS_SUB, MI_ROOTS_BASS, MI_ROOTS_MID, MI_ROOTS_HIGH, MI_DUB_STYLE, MI_DUB_APPLY, MI_DUB_CHORD, MI_DUB_SIREN, MI_BASS_STYLE, MI_BASS_APPLY, MI_SKANK_STYLE, MI_SKANK_APPLY, MI_COUNT };
+       MI_RATE, MI_FRESO, MI_ADV, MI_DPREV, MI_CPU1, MI_PANEL, MI_LCLEAR, MI_ABOUT, MI_ROOTS_SUB, MI_ROOTS_BASS, MI_ROOTS_MID, MI_ROOTS_HIGH, MI_DUB_STYLE, MI_DUB_APPLY, MI_SIREN_SWEEP, MI_SIREN_TIME, MI_SIREN_RATE, MI_SIREN_DEPTH, MI_BASS_STYLE, MI_BASS_APPLY, MI_DUB_CHORD, MI_SKANK_STYLE, MI_SKANK_APPLY, MI_COUNT };
 static const char *const MI_NAME[MI_COUNT] = {"COLOR", "ZOOM", "KNOB ACCEL", "LIGHTS", "KEYS", "NOTES", "SPEAKER LOWCUT", "USB AUDIO",
 #if FELUCCA_CDC
                                               "USB SERIAL",
 #endif
-                                              "USB RATE", "FILTER RESO", "STEP ADVANCE", "DRUM PREVIEW", "2ND CORE", "HARDWARE CALIBRATION", "MIDI LEARN CLEAR", "ABOUT", "SUB", "BASS", "MID", "HIGH", "STYLE", "LOAD PATTERN", "SKANK CHORD", "DUB SIREN", "BASS STYLE", "LOAD BASS", "SKANK STYLE", "LOAD SKANK"};
-enum { MS_SCREEN, MS_LIGHTS, MS_AUDIO, MS_SEQ, MS_SYSTEM, MS_ROOTS, MS_DUBPAT, MS_DUBPLAY, MS_DUBBASS, MS_DUBSKANK, MS_COUNT };   /* (2.7.1: SEQ) */
-static const char *const MS_NAME[MS_COUNT] = {"SCREEN", "LIGHTS", "AUDIO", "SEQ", "SYSTEM", "ROOTS", "DUB PAT", "DUB PLAY", "DUB BASS", "DUB SKANK"};   /* (AUDIO: and USB) */
-static const uint8_t MS_FIRST[MS_COUNT + 1] = {MI_COLOR, MI_LIGHTS, MI_LOWCUT, MI_ADV, MI_CPU1, MI_ROOTS_SUB, MI_DUB_STYLE, MI_DUB_CHORD, MI_BASS_STYLE, MI_SKANK_STYLE, MI_COUNT};   /* rows of each */
+                                              "USB RATE", "FILTER RESO", "STEP ADVANCE", "DRUM PREVIEW", "2ND CORE", "HARDWARE CALIBRATION", "MIDI LEARN CLEAR", "ABOUT", "SUB", "BASS", "MID", "HIGH", "STYLE", "LOAD PATTERN", "SWEEP", "TIME", "LFO RATE", "LFO DEPTH", "BASS STYLE", "LOAD BASS", "SKANK CHORD", "SKANK STYLE", "LOAD SKANK"};
+enum { MS_SCREEN, MS_LIGHTS, MS_AUDIO, MS_SEQ, MS_SYSTEM, MS_ROOTS, MS_DUBPAT, MS_SIREN, MS_DUBBASS, MS_SKANK, MS_COUNT };   /* (2.7.1: SEQ) */
+static const char *const MS_NAME[MS_COUNT] = {"SCREEN", "LIGHTS", "AUDIO", "SEQ", "SYSTEM", "ROOTS", "DUB PAT", "SIREN", "DUB BASS", "SKANK"};   /* (AUDIO: and USB) */
+static const uint8_t MS_FIRST[MS_COUNT + 1] = {MI_COLOR, MI_LIGHTS, MI_LOWCUT, MI_ADV, MI_CPU1, MI_ROOTS_SUB, MI_DUB_STYLE, MI_SIREN_SWEEP, MI_BASS_STYLE, MI_DUB_CHORD, MI_COUNT};   /* rows of each */
 
 UI_SMALL static int mi_cpu1_have(void)                      /* the second core is running (cpu1.c; the host tests have no cpu1.c) */
 {
@@ -62,8 +62,21 @@ UI_SMALL static const char *mi_value(uint32_t i, uint16_t *c)
     switch (i) {
     case MI_DUB_STYLE: return DUB_PATTERN_NAME[dub_pattern_style % 10u];
     case MI_DUB_APPLY: return "OCT+ TO LOAD";
+    case MI_SIREN_SWEEP: case MI_SIREN_TIME: case MI_SIREN_RATE: case MI_SIREN_DEPTH: {
+        static char b[16];
+        const char *unit;
+        uint32_t k = i - MI_SIREN_SWEEP;
+        const param_desc_t *d = &ENGINES[ENGI_SIREN]->edit[k + 1u];
+        param_format(d, TSEL->p[P_E1 + k], b, &unit);
+        if (unit[0]) {
+            uint32_t n = str_len(b);
+            str_cpy(b + n, " ", sizeof b - n);
+            n = str_len(b);
+            str_cpy(b + n, unit, sizeof b - n);
+        }
+        return b;
+    }
     case MI_DUB_CHORD: return DUB_CHORD_NAME[(uint32_t)clamp(TSEL->p[P_CHORD], 0, 9)];
-    case MI_DUB_SIREN: return "OCT+ TO SELECT";
     case MI_BASS_STYLE: return DUB_BASS_NAME[dub_bass_style % 8u];
     case MI_BASS_APPLY: return "OCT+ TO LOAD";
     case MI_SKANK_STYLE: return DUB_SKANK_NAME[dub_skank_style % 6u];
@@ -288,14 +301,25 @@ UI_SMALL static void mi_set(uint32_t i, int32_t s)
             TSEL->p[P_CHORD] = (int16_t)(6 + ((TSEL->p[P_CHORD] - 6 + (s < 0 ? 3 : 1)) % 4));
         ui.force = 1;
         break;
-    case MI_DUB_SIREN:
-        if (!s) {
-            if (is_drum(TSEL)) { ui_message("SELECT A SYNTH TRACK"); break; }
+    case MI_SIREN_SWEEP: case MI_SIREN_TIME: case MI_SIREN_RATE: case MI_SIREN_DEPTH: {
+        uint32_t k = i - MI_SIREN_SWEEP;
+        uint32_t id = P_E1 + k;
+        const param_desc_t *d = &ENGINES[ENGI_SIREN]->edit[k + 1u];
+        int32_t *unused = 0;
+        int32_t v;
+        (void)unused;
+        if (!s)
+            break;
+        if (is_drum(TSEL)) { ui_message("SELECT A SYNTH TRACK"); break; }
+        if (TSEL->eng_req != ENGI_SIREN)
             roots_dub_select_siren();
-            ui_message("DUB SIREN SELECTED");
-            ui.force = 1;
-        }
+        v = clamp(TSEL->p[id] + accel(EN_K1 + k, s, d->max - d->min), d->min, d->max);
+        TSEL->p[id] = (int16_t)v;
+        ui.lock_par = (uint8_t)id;
+        ml_knob(TSEL, id);
+        ui.force = 1;
         break;
+    }
     case MI_ROOTS_SUB: case MI_ROOTS_BASS: case MI_ROOTS_MID: case MI_ROOTS_HIGH: {
         uint8_t enabled, gain[4]; uint32_t band = i - MI_ROOTS_SUB;
         proj_roots_get(&enabled, gain);
@@ -420,6 +444,14 @@ UI_SMALL static void menu_input(uint32_t pressed)
         int32_t to = clamp((int32_t)sec + (s > 0 ? 1 : -1), 0, MS_COUNT - 1);
         if ((uint32_t)to != sec) {
             ui.menu_sel = MS_FIRST[to];
+            if ((uint32_t)to == MS_SIREN) {
+                if (is_drum(TSEL))
+                    ui_message("SELECT A SYNTH TRACK");
+                else if (TSEL->eng_req != ENGI_SIREN) {
+                    roots_dub_select_siren();
+                    ui_message("DUB SIREN READY");
+                }
+            }
             ui.force = 1;
         }
         enc_drop();
