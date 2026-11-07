@@ -305,9 +305,7 @@ UI_SMALL static void mi_set(uint32_t i, int32_t s)
         uint32_t k = i - MI_SIREN_SWEEP;
         uint32_t id = P_E1 + k;
         const param_desc_t *d = &ENGINES[ENGI_SIREN]->edit[k + 1u];
-        int32_t *unused = 0;
         int32_t v;
-        (void)unused;
         if (!s)
             break;
         if (is_drum(TSEL)) { ui_message("SELECT A SYNTH TRACK"); break; }
@@ -316,7 +314,6 @@ UI_SMALL static void mi_set(uint32_t i, int32_t s)
         v = clamp(TSEL->p[id] + accel(EN_K1 + k, s, d->max - d->min), d->min, d->max);
         TSEL->p[id] = (int16_t)v;
         ui.lock_par = (uint8_t)id;
-        ml_knob(TSEL, id);
         ui.force = 1;
         break;
     }
