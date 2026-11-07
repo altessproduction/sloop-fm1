@@ -1175,9 +1175,8 @@ int main(int argc, char **argv)
         encs[panel.enc[EN_SELECT]] = 5; frame();
         check(mi_sec(ui.menu_sel) == MS_SEQ, "menu (2.7.1): SELECT right: SEQ (STEP ADVANCE, DRUM PREVIEW)");
         encs[panel.enc[EN_SELECT]] = 5; frame();
-        encs[panel.enc[EN_SELECT]] = 5; frame();
         sec = mi_sec(ui.menu_sel);
-        check(sec == MS_SYSTEM, "menu: SELECT stops at the last section, SYSTEM");
+        check(sec == MS_SYSTEM, "menu: SELECT reaches SYSTEM after SEQ (ROOTS DUB sections follow)");
         encs[panel.enc[EN_K1]] = -1; frame();         /* (dualcore) row 1: 2ND CORE; the render split (fx.c cpu1_units) */
         check(ui.menu_sel == MI_CPU1 && cpu1_off == 1u && cpu1_units == 0 && (lights_word() >> 26 & 1u),
               "menu SYSTEM: KNOB 1 left: 2ND CORE OFF (every render unit on core 0), saved with the settings (2.7: bit 26 set = OFF)");
@@ -1823,7 +1822,8 @@ int main(int argc, char **argv)
         check(trk[0].p[P_DIST] == TP[P_DIST].max, "CC 74 (any channel): track 1's DIST to its top");
         trk[0].p[P_DIST] = 0;
         ui.menu = 1; ui.menu_sel = 0; ui.force = 1; frame();
-        for (j = 0; j < 6u; j++) { encs[panel.enc[EN_SELECT]] = 1; frame(); }
+        for (j = 0; j < 4u; j++) { encs[panel.enc[EN_SELECT]] = 1; frame(); }
+        check(mi_sec(ui.menu_sel) == MS_SYSTEM, "menu navigation: SYSTEM remains reachable before ROOTS DUB pages");
         encs[panel.enc[EN_K3]] = 1; frame();          /* (dualcore: row 3, after 2ND CORE) */
         tap(B_OCTUP);
         check(ui.menu_sel == MI_LCLEAR && ml_count() == 0u, "menu SYSTEM > MIDI LEARN CLEAR, OCT+: nothing learned any more");
