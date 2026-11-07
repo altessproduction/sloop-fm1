@@ -1186,8 +1186,9 @@ int main(int argc, char **argv)
         go_home(); ui.force = 1; frame();
     }
 
-    {   /* ROOTS DUB: exercise the real native menu actions, not only the pattern loaders. */
+    {   /* ROOTS DUB: native menu actions and live siren modulation on K1..K4. */
         uint32_t i, notes;
+        int16_t siren_before[4];
         song.sel = 0;                         /* a synth part; drums remain on their own track */
         ui.menu = 1; ui.menu_sel = MI_DUB_STYLE; ui.force = 1; frame();
         check(mi_sec(ui.menu_sel) == MS_DUBPAT &&
@@ -1206,8 +1207,21 @@ int main(int argc, char **argv)
               "ROOTS DUB menu: OCT+ on LOAD PATTERN loads the selected groove and confirms it");
 
         encs[panel.enc[EN_SELECT]] = 1; frame();
-        check(mi_sec(ui.menu_sel) == MS_DUBPLAY && ui.menu_sel == MI_DUB_CHORD,
-              "ROOTS DUB menu: SELECT opens DUB PLAY with SKANK CHORD and DUB SIREN");
+        check(mi_sec(ui.menu_sel) == MS_SIREN && ui.menu_sel == MI_SIREN_SWEEP &&
+              TSEL->eng_req == ENGI_SIREN,
+              "ROOTS DUB menu: SELECT opens SIREN and selects the playable siren engine");
+        siren_before[0] = TSEL->p[P_E1]; siren_before[1] = TSEL->p[P_E2];
+        siren_before[2] = TSEL->p[P_E3]; siren_before[3] = TSEL->p[P_E4];
+        for (i = 0; i < 4u; i++) { encs[panel.enc[EN_K1 + i]] = 1; frame(); }
+        check(TSEL->p[P_E1] != siren_before[0] && TSEL->p[P_E2] != siren_before[1] &&
+              TSEL->p[P_E3] != siren_before[2] && TSEL->p[P_E4] != siren_before[3],
+              "ROOTS DUB SIREN: K1 sweep, K2 time, K3 LFO rate, K4 LFO depth change live engine parameters");
+        check(TSEL->p[P_E1] >= -48 && TSEL->p[P_E1] <= 48 &&
+              TSEL->p[P_E2] >= 0 && TSEL->p[P_E2] <= 127 &&
+              TSEL->p[P_E3] >= 0 && TSEL->p[P_E3] <= 127 &&
+              TSEL->p[P_E4] >= 0 && TSEL->p[P_E4] <= 127,
+              "ROOTS DUB SIREN: all four live controls stay inside the engine parameter ranges");
+
         encs[panel.enc[EN_SELECT]] = 1; frame();
         check(mi_sec(ui.menu_sel) == MS_DUBBASS && ui.menu_sel == MI_BASS_STYLE,
               "ROOTS DUB menu: SELECT opens DUB BASS");
@@ -1222,18 +1236,22 @@ int main(int argc, char **argv)
               "ROOTS DUB menu: OCT+ on LOAD BASS writes notes to the selected synth track");
 
         encs[panel.enc[EN_SELECT]] = 1; frame();
-        check(mi_sec(ui.menu_sel) == MS_DUBSKANK && ui.menu_sel == MI_SKANK_STYLE,
-              "ROOTS DUB menu: SELECT opens DUB SKANK");
+        check(mi_sec(ui.menu_sel) == MS_SKANK && ui.menu_sel == MI_DUB_CHORD,
+              "ROOTS DUB menu: SELECT opens the dedicated SKANK page");
         encs[panel.enc[EN_K1]] = 1; frame();
+        check(TSEL->p[P_CHORD] == 6 &&
+              !strcmp(mi_value(MI_DUB_CHORD, &(uint16_t){0}), "SKANK"),
+              "ROOTS DUB SKANK: K1 selects the one-key SKANK chord voicing");
+        encs[panel.enc[EN_K2]] = 1; frame();
         check(dub_skank_style == 1u &&
               !strcmp(mi_value(MI_SKANK_STYLE, &(uint16_t){0}), "DOUBLE"),
-              "ROOTS DUB menu: KNOB 1 changes the skank pattern name");
+              "ROOTS DUB SKANK: K2 changes the skank pattern name");
         ui.menu_sel = MI_SKANK_APPLY; ui.force = 1; frame(); tap(B_OCTUP);
         notes = 0;
         for (i = 0; i < NSTEP; i++)
             notes += TSEL->step[i].n >= 4u;
         check(notes >= 2u && !strcmp(ui.msg, "DUB SKANK LOADED"),
-              "ROOTS DUB menu: OCT+ on LOAD SKANK writes four-note chords to the selected synth track");
+              "ROOTS DUB SKANK: OCT+ on LOAD SKANK writes four-note chords to the selected synth track");
 
         /* The menu must refuse bass/skank loads on the drum part instead of corrupting its lanes. */
         song.sel = 3; ui.menu_sel = MI_BASS_APPLY; ui.force = 1; frame(); tap(B_OCTUP);
