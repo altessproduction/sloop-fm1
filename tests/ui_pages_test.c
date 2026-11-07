@@ -79,6 +79,26 @@ static void up_name(uint32_t k, char *b) { str_cpy(b, k ? "MY PAD" : "MY LEAD", 
 static void up_slot_label(char *b, uint32_t k) { fmt_int(b, (int32_t)k + 1); }
 static void up_ui(uint32_t op, uint32_t k) { (void)op; (void)k; }
 static void settings_save(void) {}
+
+/* Isolated project ROOTS settings double for the native UI harness.
+ * The real implementation lives in project.c; the UI test links only the
+ * UI/audio harness and must not pull in the complete project persistence layer.
+ */
+static uint8_t host_proj_roots_enabled;
+static uint8_t host_proj_roots_gain[4] = {127u, 127u, 127u, 127u};
+void proj_roots_get(uint8_t *enabled, uint8_t gain[4])
+{
+    uint32_t i;
+    *enabled = host_proj_roots_enabled;
+    for (i = 0; i < 4u; ++i) gain[i] = host_proj_roots_gain[i];
+}
+void proj_roots_set(uint8_t enabled, const uint8_t gain[4])
+{
+    uint32_t i;
+    host_proj_roots_enabled = (uint8_t)(enabled != 0u);
+    for (i = 0; i < 4u; ++i)
+        host_proj_roots_gain[i] = gain[i] > 127u ? 127u : gain[i];
+}
 #include "../firmware/src/ui_song.c"
 #include "../firmware/src/ui_studio.c"
 #include "../firmware/src/icons.c"
