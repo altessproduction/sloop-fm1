@@ -87,6 +87,7 @@ static void settings_save(void) {}
 #include "../firmware/src/ui_layers.c"
 #include "../firmware/src/ui_menu.c"
 #include "../firmware/src/ui_input.c"
+#define FELUCCA_LOGO_TEXT 1 /* Native UI test does not need the generated bitmap logo header. */
 #include "../firmware/src/splash.c"
 /* (2.7) the theme's CRC: storage.c's st_crc32 (its flash hooks unused here) */
 static int st_read(uint32_t off, void *dst, uint32_t n) { (void)off, (void)dst, (void)n; return -1; }
