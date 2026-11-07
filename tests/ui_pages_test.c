@@ -1210,6 +1210,11 @@ int main(int argc, char **argv)
         check(mi_sec(ui.menu_sel) == MS_SIREN && ui.menu_sel == MI_SIREN_SWEEP &&
               TSEL->eng_req == ENGI_SIREN,
               "ROOTS DUB menu: SELECT opens SIREN and selects the playable siren engine");
+        check(ENGINES[ENGI_SIREN]->macro[0] == P_E1 &&
+              ENGINES[ENGI_SIREN]->macro[1] == P_E2 &&
+              ENGINES[ENGI_SIREN]->macro[2] == P_E3 &&
+              ENGINES[ENGI_SIREN]->macro[3] == P_E4,
+              "ROOTS DUB SIREN: HOME K1..K4 map to sweep, sweep time, LFO rate and LFO depth");
         siren_before[0] = TSEL->p[P_E1]; siren_before[1] = TSEL->p[P_E2];
         siren_before[2] = TSEL->p[P_E3]; siren_before[3] = TSEL->p[P_E4];
         for (i = 0; i < 4u; i++) { encs[panel.enc[EN_K1 + i]] = 1; frame(); }
