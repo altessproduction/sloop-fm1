@@ -65,6 +65,7 @@ UI_SMALL static const char *mi_value(uint32_t i, uint16_t *c)
     case MI_DUB_APPLY: return "OCT+ TO LOAD";
     case MI_SIREN_SWEEP: case MI_SIREN_TIME: case MI_SIREN_RATE: case MI_SIREN_DEPTH: {
         static char b[16];
+        if (is_drum(TSEL)) { *c = C_DIM; return "SELECT SYNTH"; }
         const char *unit;
         uint32_t k = i - MI_SIREN_SWEEP;
         const param_desc_t *d = &ENGINES[ENGI_SIREN]->edit[k + 1u];
