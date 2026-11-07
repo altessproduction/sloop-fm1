@@ -38,6 +38,7 @@ UI_SMALL static int mi_cpu1_have(void)                      /* the second core i
 }
 static const char *const LIGHTS_NAME[LIGHTS_N] = {"OFF", "LOW", "MID", "HIGH"};   /* every button lit, the labels readable */
 static uint8_t dub_pattern_style, dub_bass_style, dub_skank_style;
+/* SIREN page macros: K1 sweep depth (E1), K2 sweep time (E2), K3 LFO rate (E3), K4 LFO depth (E4). */
 static const char *const DUB_PATTERN_NAME[10] = {"ONE DROP", "STEPPERS", "ROCKERS", "ROCKSTEADY", "RUB A DUB", "DUB BREAK", "NYABINGHI", "SKA", "EARLY REGGAE", "HALF TIME"};
 static const char *const DUB_BASS_NAME[8] = {"ROOTS", "WALKING", "STEPPERS", "ROCKERS", "ONE DROP", "DUB WALK", "ROCKERS 2", "SKA BASS"};
 static const char *const DUB_SKANK_NAME[6] = {"OFFBEAT", "DOUBLE", "ROCKERS", "HALF STEP", "UPSTROKE", "SKA CHOP"};
