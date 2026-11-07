@@ -1186,6 +1186,63 @@ int main(int argc, char **argv)
         go_home(); ui.force = 1; frame();
     }
 
+    {   /* ROOTS DUB: exercise the real native menu actions, not only the pattern loaders. */
+        uint32_t i, notes;
+        song.sel = 0;                         /* a synth part; drums remain on their own track */
+        ui.menu = 1; ui.menu_sel = MI_DUB_STYLE; ui.force = 1; frame();
+        check(mi_sec(ui.menu_sel) == MS_DUBPAT &&
+              !strcmp(MS_NAME[mi_sec(ui.menu_sel)], "DUB PAT") &&
+              !strcmp(mi_value(MI_DUB_STYLE, &(uint16_t){0}), "ONE DROP"),
+              "ROOTS DUB menu: DUB PAT exposes the drum groove selector natively");
+        encs[panel.enc[EN_K1]] = 1; frame();
+        check(dub_pattern_style == 1u &&
+              !strcmp(mi_value(MI_DUB_STYLE, &(uint16_t){0}), "STEPPERS"),
+              "ROOTS DUB menu: KNOB 1 changes the visible drum pattern name");
+        ui.menu_sel = MI_DUB_APPLY; ui.force = 1; frame(); tap(B_OCTUP);
+        notes = 0;
+        for (i = 0; i < NSTEP; i++) notes += dstep_mask(&TDRUM->dstep[i]) != 0u;
+        check(notes > 0u && TDRUM->seq_active &&
+              !strcmp(ui.msg, "DUB PATTERN LOADED"),
+              "ROOTS DUB menu: OCT+ on LOAD PATTERN loads the selected groove and confirms it");
+
+        encs[panel.enc[EN_SELECT]] = 1; frame();
+        check(mi_sec(ui.menu_sel) == MS_DUBPLAY && ui.menu_sel == MI_DUB_CHORD,
+              "ROOTS DUB menu: SELECT opens DUB PLAY with SKANK CHORD and DUB SIREN");
+        encs[panel.enc[EN_SELECT]] = 1; frame();
+        check(mi_sec(ui.menu_sel) == MS_DUBBASS && ui.menu_sel == MI_BASS_STYLE,
+              "ROOTS DUB menu: SELECT opens DUB BASS");
+        encs[panel.enc[EN_K1]] = 1; frame();
+        check(dub_bass_style == 1u &&
+              !strcmp(mi_value(MI_BASS_STYLE, &(uint16_t){0}), "WALKING"),
+              "ROOTS DUB menu: KNOB 1 changes the bass pattern name");
+        ui.menu_sel = MI_BASS_APPLY; ui.force = 1; frame(); tap(B_OCTUP);
+        notes = 0;
+        for (i = 0; i < NSTEP; i++) notes += TSEL->step[i].n != 0u;
+        check(notes >= 4u && !strcmp(ui.msg, "DUB BASS LOADED"),
+              "ROOTS DUB menu: OCT+ on LOAD BASS writes notes to the selected synth track");
+
+        encs[panel.enc[EN_SELECT]] = 1; frame();
+        check(mi_sec(ui.menu_sel) == MS_DUBSKANK && ui.menu_sel == MI_SKANK_STYLE,
+              "ROOTS DUB menu: SELECT opens DUB SKANK");
+        encs[panel.enc[EN_K1]] = 1; frame();
+        check(dub_skank_style == 1u &&
+              !strcmp(mi_value(MI_SKANK_STYLE, &(uint16_t){0}), "DOUBLE"),
+              "ROOTS DUB menu: KNOB 1 changes the skank pattern name");
+        ui.menu_sel = MI_SKANK_APPLY; ui.force = 1; frame(); tap(B_OCTUP);
+        notes = 0;
+        for (i = 0; i < NSTEP; i++)
+            notes += TSEL->step[i].n >= 4u;
+        check(notes >= 2u && !strcmp(ui.msg, "DUB SKANK LOADED"),
+              "ROOTS DUB menu: OCT+ on LOAD SKANK writes four-note chords to the selected synth track");
+
+        /* The menu must refuse bass/skank loads on the drum part instead of corrupting its lanes. */
+        song.sel = 3; ui.menu_sel = MI_BASS_APPLY; ui.force = 1; frame(); tap(B_OCTUP);
+        check(!strcmp(ui.msg, "SELECT A SYNTH TRACK"),
+              "ROOTS DUB menu: bass/skank loader protects the drum track");
+        ui.menu = 0; ui.force = 1; go_home(); frame();
+        song.sel = 0;
+    }
+
     {   /* SELECT (2.4): the pages of the family shown; the tempo on HOME (TRACKS), in a layer, on REC */
         int16_t bpm;
         #define PT() (PAGES[ui.page].title)
