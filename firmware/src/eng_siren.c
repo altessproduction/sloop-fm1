@@ -85,6 +85,6 @@ static const engine_t ENG_SIREN = {
     .note_on = siren_note_on,
     .render = siren_render,
     .color = 0xD6A5,
-    .macro = {P_E0, P_E1, P_E5, P_E3},
+    .macro = {P_E1, P_E2, P_E3, P_E4},
     .poly = 1,
 };
