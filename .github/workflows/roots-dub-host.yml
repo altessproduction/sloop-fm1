@@ -1,5 +1,13 @@
 name: ROOTS DUB native regression
 on:
+  push:
+    branches: ["feature/**", "test/**"]
+    paths:
+      - "firmware/src/**"
+      - "firmware/host/**"
+      - "tests/**"
+      - "tools/**"
+      - ".github/workflows/roots-dub-host.yml"
   pull_request:
     paths:
       - "firmware/src/**"
