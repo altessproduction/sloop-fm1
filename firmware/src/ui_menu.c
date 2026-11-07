@@ -202,13 +202,18 @@ UI_SMALL static void draw_menu(void)
             cv_text(4, 185, &FONT_S, "PHASE: CRISPYZEBRA (GPL)", C_DIM);
             cv_text(4, 198, &FONT_S, "VOICE: REF. KLATTSCH (MIT)", C_DIM);
         } else {
-            int32_t x = 4;
-            for (i = 0; i < MS_COUNT; i++) {        /* the sections as tabs: this one lit */
-                int32_t w = text_w(&FONT_S, MS_NAME[i]);
-                if (i == sec)
-                    cv_rect(x - 2, 3, w + 4, 18, C_LINE);
-                cv_text(x, 4, &FONT_S, MS_NAME[i], i == sec ? C_WHITE : C_DIM);
-                x += w + 6;                         /* (2.7.1: five sections: 6, the last ends at 236) */
+            {   /* Keep the active tab visible as ROOTS DUB adds pages. The old
+                 * fixed row overflowed the 240 px display with ten sections. */
+                int32_t cw = text_w(&FONT_S, MS_NAME[sec]);
+                int32_t cx = (240 - cw) / 2;
+                cv_rect(cx - 3, 3, cw + 6, 18, C_LINE);
+                cv_text(cx, 4, &FONT_S, MS_NAME[sec], C_WHITE);
+                if (sec > 0u) {
+                    int32_t pw = text_w(&FONT_S, MS_NAME[sec - 1u]);
+                    cv_text(cx - pw - 12, 4, &FONT_S, MS_NAME[sec - 1u], C_DIM);
+                }
+                if (sec + 1u < MS_COUNT)
+                    cv_text(cx + cw + 12, 4, &FONT_S, MS_NAME[sec + 1u], C_DIM);
             }
             for (i = MS_FIRST[sec]; i < MS_FIRST[sec + 1u]; i++) {
                 uint32_t r = i - MS_FIRST[sec];
