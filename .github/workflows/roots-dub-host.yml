@@ -1,4 +1,4 @@
-name: ROOTS DUB native regression
+name: ROOTS DUB native regression (SIREN and SKANK)
 on:
   push:
     branches: ["feature/**", "test/**"]
