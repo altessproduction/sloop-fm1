@@ -1,5 +1,5 @@
 name: ROOTS DUB WebAssembly emulator
-# Rebuild and smoke-test the ROOTS DUB browser emulator from the merged firmware sources.
+# Rebuild and smoke-test the ROOTS DUB browser emulator from the SIREN/SKANK firmware sources.
 # Each successful run publishes a unique Pages artifact; the deploy workflow retires stale deployments.
 on:
   pull_request:
