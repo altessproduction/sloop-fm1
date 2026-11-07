@@ -1,3 +1,4 @@
+# Permission retry 2026-11-07
 # Trigger native regression after repository workflow activation.
 name: ROOTS DUB native regression (SIREN and SKANK)
 on:
