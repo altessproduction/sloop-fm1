@@ -1,5 +1,5 @@
 name: ROOTS DUB WebAssembly emulator
-# Rebuild and smoke-test the ROOTS DUB browser emulator from the merged firmware sources.
+# Rebuild and smoke-test the ROOTS DUB browser emulator from the SIREN/SKANK firmware sources.
 # Each successful run publishes a unique Pages artifact; the deploy workflow retires stale deployments.
 on:
   pull_request:
@@ -40,7 +40,7 @@ jobs:
           test -s build/sloop-web-emu/dist/worklet.js
           file build/sloop-web-emu/dist/sloop.wasm
           ls -lh build/sloop-web-emu/dist/sloop.wasm
-          for label in "ROOTS" "DUB PAT" "DUB PLAY" "DUB BASS" "DUB SKANK" "SKANK CHORD" "DUB SIREN"; do
+          for label in "ROOTS" "DUB PAT" "SIREN" "DUB BASS" "SKANK" "SKANK CHORD" "DUB SIREN"; do
             strings build/sloop-web-emu/dist/sloop.wasm | grep -Fq "$label" || { echo "Missing native FM-1 menu label: $label"; exit 1; }
           done
       - name: Install browser smoke-test runtime

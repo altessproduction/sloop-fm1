@@ -1,5 +1,15 @@
-name: ROOTS DUB native regression
+# Permission retry 2026-11-07 (allowlist corrected)
+# Trigger native regression after repository workflow activation.
+name: ROOTS DUB native regression (SIREN and SKANK)
 on:
+  push:
+    branches: ["feature/**", "test/**"]
+    paths:
+      - "firmware/src/**"
+      - "firmware/host/**"
+      - "tests/**"
+      - "tools/**"
+      - ".github/workflows/roots-dub-host.yml"
   pull_request:
     paths:
       - "firmware/src/**"
@@ -22,8 +32,18 @@ jobs:
           sudo apt-get install -y clang lld
       - name: Generate firmware tables and build browser preview
         run: python3 tools/build_preview.py
+      - name: Generate the UI font and icon headers for native framebuffer tests
+        run: |
+          sudo apt-get install -y python3-pil
+          python3 tools/gen_font.py build/gen/felucca_font.h
+          python3 tools/gen_icons.py build/gen/felucca_icons.h
       - name: Compare native and WebAssembly output for every engine
         run: tests/run_preview_tests.sh
+      - name: Exercise the actual native FM-1 UI, including ROOTS DUB menu actions
+        run: |
+          mkdir -p build/host
+          cc -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o build/host/ui_pages_test tests/ui_pages_test.c -lm
+          build/host/ui_pages_test build/host
       - name: Test ROOTS DUB crossover and chord behavior
         run: |
           mkdir -p build/host
@@ -39,3 +59,5 @@ jobs:
         run: |
           cc -O2 -w -Ibuild/gen -Ifirmware/src -o build/host/regress tests/regress.c -lm
           build/host/regress tests/golden.txt tests/cpu_baseline.txt
+
+# CI retrigger after repository Actions allow-list update (2026-11-07).

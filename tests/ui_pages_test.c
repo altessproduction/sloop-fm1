@@ -79,6 +79,26 @@ static void up_name(uint32_t k, char *b) { str_cpy(b, k ? "MY PAD" : "MY LEAD", 
 static void up_slot_label(char *b, uint32_t k) { fmt_int(b, (int32_t)k + 1); }
 static void up_ui(uint32_t op, uint32_t k) { (void)op; (void)k; }
 static void settings_save(void) {}
+
+/* Isolated project ROOTS settings double for the native UI harness.
+ * The real implementation lives in project.c; the UI test links only the
+ * UI/audio harness and must not pull in the complete project persistence layer.
+ */
+static uint8_t host_proj_roots_enabled;
+static uint8_t host_proj_roots_gain[4] = {127u, 127u, 127u, 127u};
+void proj_roots_get(uint8_t *enabled, uint8_t gain[4])
+{
+    uint32_t i;
+    *enabled = host_proj_roots_enabled;
+    for (i = 0; i < 4u; ++i) gain[i] = host_proj_roots_gain[i];
+}
+void proj_roots_set(uint8_t enabled, const uint8_t gain[4])
+{
+    uint32_t i;
+    host_proj_roots_enabled = (uint8_t)(enabled != 0u);
+    for (i = 0; i < 4u; ++i)
+        host_proj_roots_gain[i] = gain[i] > 127u ? 127u : gain[i];
+}
 #include "../firmware/src/ui_song.c"
 #include "../firmware/src/ui_studio.c"
 #include "../firmware/src/icons.c"
@@ -87,6 +107,7 @@ static void settings_save(void) {}
 #include "../firmware/src/ui_layers.c"
 #include "../firmware/src/ui_menu.c"
 #include "../firmware/src/ui_input.c"
+#define FELUCCA_LOGO_TEXT 1 /* Native UI test does not need the generated bitmap logo header. */
 #include "../firmware/src/splash.c"
 /* (2.7) the theme's CRC: storage.c's st_crc32 (its flash hooks unused here) */
 static int st_read(uint32_t off, void *dst, uint32_t n) { (void)off, (void)dst, (void)n; return -1; }
@@ -1154,9 +1175,8 @@ int main(int argc, char **argv)
         encs[panel.enc[EN_SELECT]] = 5; frame();
         check(mi_sec(ui.menu_sel) == MS_SEQ, "menu (2.7.1): SELECT right: SEQ (STEP ADVANCE, DRUM PREVIEW)");
         encs[panel.enc[EN_SELECT]] = 5; frame();
-        encs[panel.enc[EN_SELECT]] = 5; frame();
         sec = mi_sec(ui.menu_sel);
-        check(sec == MS_SYSTEM, "menu: SELECT stops at the last section, SYSTEM");
+        check(sec == MS_SYSTEM, "menu: SELECT reaches SYSTEM after SEQ (ROOTS DUB sections follow)");
         encs[panel.enc[EN_K1]] = -1; frame();         /* (dualcore) row 1: 2ND CORE; the render split (fx.c cpu1_units) */
         check(ui.menu_sel == MI_CPU1 && cpu1_off == 1u && cpu1_units == 0 && (lights_word() >> 26 & 1u),
               "menu SYSTEM: KNOB 1 left: 2ND CORE OFF (every render unit on core 0), saved with the settings (2.7: bit 26 set = OFF)");
@@ -1184,6 +1204,86 @@ int main(int argc, char **argv)
         check(ui.menu == 0, "menu: OCT- closes");
         lights_keys = KEYS_OFF; lights_notes = 0; lights_lvl = LIGHTS_OFF;
         go_home(); ui.force = 1; frame();
+    }
+
+    {   /* ROOTS DUB: native menu actions and live siren modulation on K1..K4. */
+        uint32_t i, notes;
+        int16_t siren_before[4];
+        song.sel = 0;                         /* a synth part; drums remain on their own track */
+        ui.menu = 1; ui.menu_sel = MI_DUB_STYLE; ui.force = 1; frame();
+        check(mi_sec(ui.menu_sel) == MS_DUBPAT &&
+              !strcmp(MS_NAME[mi_sec(ui.menu_sel)], "DUB PAT") &&
+              !strcmp(mi_value(MI_DUB_STYLE, &(uint16_t){0}), "ONE DROP"),
+              "ROOTS DUB menu: DUB PAT exposes the drum groove selector natively");
+        encs[panel.enc[EN_K1]] = 1; frame();
+        check(dub_pattern_style == 1u &&
+              !strcmp(mi_value(MI_DUB_STYLE, &(uint16_t){0}), "STEPPERS"),
+              "ROOTS DUB menu: KNOB 1 changes the visible drum pattern name");
+        ui.menu_sel = MI_DUB_APPLY; ui.force = 1; frame(); tap(B_OCTUP);
+        notes = 0;
+        for (i = 0; i < NSTEP; i++) notes += dstep_mask(&TDRUM->dstep[i]) != 0u;
+        check(notes > 0u && TDRUM->seq_active &&
+              !strcmp(ui.msg, "DUB PATTERN LOADED"),
+              "ROOTS DUB menu: OCT+ on LOAD PATTERN loads the selected groove and confirms it");
+
+        encs[panel.enc[EN_SELECT]] = 1; frame();
+        check(mi_sec(ui.menu_sel) == MS_SIREN && ui.menu_sel == MI_SIREN_SWEEP &&
+              TSEL->eng_req == ENGI_SIREN,
+              "ROOTS DUB menu: SELECT opens SIREN and selects the playable siren engine");
+        check(ENGINES[ENGI_SIREN]->macro[0] == P_E1 &&
+              ENGINES[ENGI_SIREN]->macro[1] == P_E2 &&
+              ENGINES[ENGI_SIREN]->macro[2] == P_E3 &&
+              ENGINES[ENGI_SIREN]->macro[3] == P_E4,
+              "ROOTS DUB SIREN: HOME K1..K4 map to sweep, sweep time, LFO rate and LFO depth");
+        siren_before[0] = TSEL->p[P_E1]; siren_before[1] = TSEL->p[P_E2];
+        siren_before[2] = TSEL->p[P_E3]; siren_before[3] = TSEL->p[P_E4];
+        for (i = 0; i < 4u; i++) { encs[panel.enc[EN_K1 + i]] = 1; frame(); }
+        check(TSEL->p[P_E1] != siren_before[0] && TSEL->p[P_E2] != siren_before[1] &&
+              TSEL->p[P_E3] != siren_before[2] && TSEL->p[P_E4] != siren_before[3],
+              "ROOTS DUB SIREN: K1 sweep, K2 time, K3 LFO rate, K4 LFO depth change live engine parameters");
+        check(TSEL->p[P_E1] >= -48 && TSEL->p[P_E1] <= 48 &&
+              TSEL->p[P_E2] >= 0 && TSEL->p[P_E2] <= 127 &&
+              TSEL->p[P_E3] >= 0 && TSEL->p[P_E3] <= 127 &&
+              TSEL->p[P_E4] >= 0 && TSEL->p[P_E4] <= 127,
+              "ROOTS DUB SIREN: all four live controls stay inside the engine parameter ranges");
+
+        encs[panel.enc[EN_SELECT]] = 1; frame();
+        check(mi_sec(ui.menu_sel) == MS_DUBBASS && ui.menu_sel == MI_BASS_STYLE,
+              "ROOTS DUB menu: SELECT opens DUB BASS");
+        encs[panel.enc[EN_K1]] = 1; frame();
+        check(dub_bass_style == 1u &&
+              !strcmp(mi_value(MI_BASS_STYLE, &(uint16_t){0}), "WALKING"),
+              "ROOTS DUB menu: KNOB 1 changes the bass pattern name");
+        ui.menu_sel = MI_BASS_APPLY; ui.force = 1; frame(); tap(B_OCTUP);
+        notes = 0;
+        for (i = 0; i < NSTEP; i++) notes += TSEL->step[i].n != 0u;
+        check(notes >= 4u && !strcmp(ui.msg, "DUB BASS LOADED"),
+              "ROOTS DUB menu: OCT+ on LOAD BASS writes notes to the selected synth track");
+
+        encs[panel.enc[EN_SELECT]] = 1; frame();
+        check(mi_sec(ui.menu_sel) == MS_SKANK && ui.menu_sel == MI_DUB_CHORD,
+              "ROOTS DUB menu: SELECT opens the dedicated SKANK page");
+        encs[panel.enc[EN_K1]] = 1; frame();
+        check(TSEL->p[P_CHORD] == 6 &&
+              !strcmp(mi_value(MI_DUB_CHORD, &(uint16_t){0}), "SKANK"),
+              "ROOTS DUB SKANK: K1 selects the one-key SKANK chord voicing");
+        encs[panel.enc[EN_K2]] = 1; frame();
+        check(dub_skank_style == 1u &&
+              !strcmp(mi_value(MI_SKANK_STYLE, &(uint16_t){0}), "DOUBLE"),
+              "ROOTS DUB SKANK: K2 changes the skank pattern name");
+        ui.menu_sel = MI_SKANK_APPLY; ui.force = 1; frame(); tap(B_OCTUP);
+        notes = 0;
+        for (i = 0; i < NSTEP; i++)
+            notes += TSEL->step[i].n >= 4u;
+        check(notes >= 2u && !strcmp(ui.msg, "DUB SKANK LOADED"),
+              "ROOTS DUB SKANK: OCT+ on LOAD SKANK writes four-note chords to the selected synth track");
+
+        /* The menu must refuse bass/skank loads on the drum part instead of corrupting its lanes. */
+        song.sel = 3; ui.menu_sel = MI_BASS_APPLY; ui.force = 1; frame(); tap(B_OCTUP);
+        check(!strcmp(ui.msg, "SELECT A SYNTH TRACK"),
+              "ROOTS DUB menu: bass/skank loader protects the drum track");
+        ui.menu = 0; ui.force = 1; go_home(); frame();
+        song.sel = 0;
     }
 
     {   /* SELECT (2.4): the pages of the family shown; the tempo on HOME (TRACKS), in a layer, on REC */
@@ -1722,7 +1822,8 @@ int main(int argc, char **argv)
         check(trk[0].p[P_DIST] == TP[P_DIST].max, "CC 74 (any channel): track 1's DIST to its top");
         trk[0].p[P_DIST] = 0;
         ui.menu = 1; ui.menu_sel = 0; ui.force = 1; frame();
-        for (j = 0; j < 6u; j++) { encs[panel.enc[EN_SELECT]] = 1; frame(); }
+        for (j = 0; j < 4u; j++) { encs[panel.enc[EN_SELECT]] = 1; frame(); }
+        check(mi_sec(ui.menu_sel) == MS_SYSTEM, "menu navigation: SYSTEM remains reachable before ROOTS DUB pages");
         encs[panel.enc[EN_K3]] = 1; frame();          /* (dualcore: row 3, after 2ND CORE) */
         tap(B_OCTUP);
         check(ui.menu_sel == MI_LCLEAR && ml_count() == 0u, "menu SYSTEM > MIDI LEARN CLEAR, OCT+: nothing learned any more");
